@@ -44,6 +44,16 @@
 
 ---
 
+## 📸 截图
+
+| 文件面板 + 文件提及 | Git 面板 |
+| --- | --- |
+| ![文件面板与文件提及](shots/shot1.jpeg) | ![Git 面板](shots/shot2.jpeg) |
+| 多终端(快捷命令一键运行) | 文件面板(目录浏览) |
+| ![多终端](shots/shot3.jpeg) | ![文件面板](shots/shot4.jpeg) |
+
+---
+
 ## 📦 安装(无需克隆项目)
 
 插件已发布到 [npm](https://www.npmjs.com/package/dsh-ui-tools) 与 [GitHub](https://github.com/xing-shuyin/dsh-ui-tools):
