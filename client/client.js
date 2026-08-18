@@ -66,6 +66,7 @@ var Ba=Object.create;var Ci=Object.defineProperty;var Ma=Object.getOwnPropertyDe
 	min-height: 0;
 	background: var(--bg-elev);
 	border-left: 1px solid var(--border);
+	position: relative;
 }
 
 .ut-panel-head {
@@ -82,18 +83,27 @@ var Ba=Object.create;var Ci=Object.defineProperty;var Ma=Object.getOwnPropertyDe
 /* Left-edge drag handle: resize the panel width. */
 .ut-resize {
 	position: absolute;
-	left: -3px;
+	left: 0;
 	top: 0;
 	bottom: 0;
-	width: 6px;
+	width: 8px;
 	cursor: col-resize;
 	z-index: 5;
 	touch-action: none;
 }
-.ut-resize:hover,
-.ut-resize:active {
+.ut-resize::after {
+	content: "";
+	position: absolute;
+	left: 3px;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: var(--border);
+	transition: background 0.12s ease;
+}
+.ut-resize:hover::after,
+.ut-resize:active::after {
 	background: var(--accent);
-	opacity: 0.55;
 }
 
 /* Tab strip \u2014 same look as pi-web-ui's scm-view-tabs. */
