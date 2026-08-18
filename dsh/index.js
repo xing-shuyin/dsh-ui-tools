@@ -25,13 +25,15 @@ import { spawn } from 'node-pty'
 import { execFile } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import {
-  chmodSync, existsSync, readdirSync, statSync,
+  chmodSync, existsSync, readdirSync, readFileSync, statSync,
 } from 'node:fs'
 import { homedir } from 'node:os'
 import { createRequire } from 'node:module'
 import {
   dirname, extname, isAbsolute, join, relative, resolve, sep,
 } from 'node:path'
+
+import { setupMarkerTodo } from './marker-todo.js'
 
 export const name = 'dsh-ui-tools'
 
@@ -219,6 +221,89 @@ async function saveCommands(root, commands) {
   await mkdir(join(root, COMMANDS_DIR), { recursive: true })
   await writeFile(path, JSON.stringify({ commands }, null, 2) + '\n', 'utf8')
   return { path }
+}
+
+// ---------------------------------------------------------------------------
+// settings (marker feature toggle)
+// ---------------------------------------------------------------------------
+// The marker-todo feature is a model-facing behavior of the harness process,
+// so the toggle is GLOBAL (not per-workspace, unlike commands.json). It is
+// persisted at ~/.dsh-ui-tools/settings.json and applied immediately: turning
+// it off disposes the marker integration (todo_write denial, markers_list
+// tool, [[todo:...]] parsing, prompt guidance) and restores the native
+// `todo_write` tool; turning it back on re-mounts the integration.
+// ---------------------------------------------------------------------------
+
+function settingsFilePath() {
+  return join(homedir(), '.dsh-ui-tools', 'settings.json')
+}
+
+/** Read the persisted marker toggle; any read/parse failure defaults to ON. */
+function loadMarkerEnabled() {
+  try {
+    const path = settingsFilePath()
+    if (!existsSync(path)) return true
+    const parsed = JSON.parse(readFileSync(path, 'utf8'))
+    return parsed.markerEnabled !== false
+  } catch {
+    return true
+  }
+}
+
+async function saveMarkerEnabled(enabled) {
+  const dir = join(homedir(), '.dsh-ui-tools')
+  await mkdir(dir, { recursive: true })
+  await writeFile(settingsFilePath(), JSON.stringify({ markerEnabled: enabled }, null, 2) + '\n', 'utf8')
+}
+
+/**
+ * Own the marker-todo lifecycle: (dis)mount `setupMarkerTodo` on toggle and
+ * persist the switch. `apply` wires `dispose()` into the plugin teardown.
+ */
+function createMarkerController(ctx) {
+  let enabled = loadMarkerEnabled()
+  let disposer = null
+  if (enabled) {
+    try {
+      disposer = setupMarkerTodo(ctx)
+    } catch (err) {
+      console.error('[dsh-ui-tools] marker setup failed:', String((err && err.message) || err))
+      enabled = false
+    }
+  }
+  return {
+    get enabled() {
+      return enabled
+    },
+    set(next) {
+      const target = next !== false
+      if (target === enabled) return { ok: true, markerEnabled: enabled }
+      if (disposer) {
+        try { disposer() } catch { /* ignore */ }
+        disposer = null
+      }
+      if (target) {
+        try {
+          disposer = setupMarkerTodo(ctx)
+        } catch (err) {
+          enabled = false
+          void saveMarkerEnabled(false).catch(() => { /* ignore */ })
+          return { ok: false, markerEnabled: false, error: `marker 启用失败：${String((err && err.message) || err)}` }
+        }
+      }
+      enabled = target
+      void saveMarkerEnabled(enabled).catch((err) => {
+        console.error('[dsh-ui-tools] settings save failed:', String((err && err.message) || err))
+      })
+      return { ok: true, markerEnabled: enabled }
+    },
+    dispose() {
+      if (disposer) {
+        try { disposer() } catch { /* ignore */ }
+        disposer = null
+      }
+    },
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -617,6 +702,13 @@ export function apply(ctx) {
 
   const disposers = []
 
+  // Inline-marker todo: replaces the model-facing `todo_write` tool with
+  // [[todo:...]] markers written in the reply body (ported from pi-marker-tools).
+  // The settings controller lets the user toggle it at runtime (see the
+  // 设置 tab in the panel); the persisted switch is read at startup.
+  const markerController = createMarkerController(ctx)
+  disposers.push(() => markerController.dispose())
+
   // Background-job access (optional): used by the 任务 view to list/kill the
   // current session's jobs. The caller is the session's own agent so the jobs
   // registry's ownership fence passes.
@@ -675,7 +767,7 @@ export function apply(ctx) {
         kind: 'prefix',
         path: '/dsh-ui-tools',
         handler: async (req, res) => {
-          await handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc })
+          await handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc, markerController })
         },
       })
       disposers.push(offRoute)
@@ -690,7 +782,7 @@ export function apply(ctx) {
   }
 }
 
-async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc }) {
+async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc, markerController }) {
   try {
     const url = new URL(req.url, 'http://localhost')
     const path = url.pathname
@@ -856,6 +948,18 @@ async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, 
         } catch (err) {
           sendJson(res, 500, { error: `保存命令文件失败：${err.message}` })
         }
+      },
+
+      'GET /dsh-ui-tools/api/settings': async () => {
+        sendJson(res, 200, { markerEnabled: markerController.enabled })
+      },
+
+      'POST /dsh-ui-tools/api/settings': async () => {
+        const body = await readBody(req)
+        if (typeof body.markerEnabled !== 'boolean') {
+          return sendJson(res, 400, { error: 'markerEnabled 必须是布尔值' })
+        }
+        sendJson(res, 200, markerController.set(body.markerEnabled))
       },
 
       'GET /dsh-ui-tools/api/mentions': async () => {

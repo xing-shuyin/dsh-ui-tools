@@ -18,8 +18,10 @@ import pluginCss from './styles.css'
 import xtermCss from '@xterm/xterm/css/xterm.css'
 import { Panel } from './Panel'
 import { MentionStrip } from './MentionStrip'
+import { SoundWatcher } from './SoundWatcher'
 import { initLayoutControl } from './layout'
 import { replaceSessionLogLabel } from './shell-labels'
+import { initThemeWatch } from './theme'
 
 export const name = 'dsh-ui-tools'
 
@@ -39,6 +41,9 @@ export function apply(ctx: any) {
   ctx.effect(() => initLayoutControl(), 'dsh-ui-tools: layout width')
 
   ctx.effect(() => replaceSessionLogLabel(), 'dsh-ui-tools: shell labels')
+
+  // Follow the shell's light/dark theme (drives the xterm canvas palette).
+  ctx.effect(() => initThemeWatch(), 'dsh-ui-tools: theme watch')
 
   const slots = ctx.slots
   const workspacesSvc = ctx.workspaces
@@ -63,6 +68,16 @@ export function apply(ctx: any) {
     slots.register(
       { name: 'conversation.input.dock', id: 'dsh-ui-tools.mentions', order: 30 },
       (props: unknown) => React.createElement(MentionStrip, props as Record<string, never>),
+    ),
+  )
+
+  // Sound cues ride the same session-scoped dock seat (renders nothing): the
+  // framework hands it useSession/sessionId, so it watches the CURRENT session's
+  // running / pending / lastAgentError and plays start/done/question/error cues.
+  slots.inject('conversation.input.dock', () =>
+    slots.register(
+      { name: 'conversation.input.dock', id: 'dsh-ui-tools.sounds', order: 20 },
+      (props: unknown) => React.createElement(SoundWatcher, props as Record<string, never>),
     ),
   )
 }

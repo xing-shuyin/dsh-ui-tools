@@ -17,7 +17,8 @@ import { FilesView } from './FilesView'
 import { TerminalView } from './TerminalView'
 import { GitView } from './GitView'
 import { JobsView } from './JobsView'
-import { FiActivity, FiFile, FiGitBranch, FiTerminal } from './icons'
+import { SettingsView } from './SettingsView'
+import { FiActivity, FiFile, FiGitBranch, FiSettings, FiTerminal } from './icons'
 
 export interface WorkspaceInfo {
   workspaceId: string
@@ -38,6 +39,7 @@ const TABS: { tab: PanelTab; label: string; icon: React.ReactNode }[] = [
   { tab: 'terminal', label: '终端', icon: React.createElement(FiTerminal, { size: 13 }) },
   { tab: 'git', label: 'Git', icon: React.createElement(FiGitBranch, { size: 13 }) },
   { tab: 'jobs', label: '任务', icon: React.createElement(FiActivity, { size: 13 }) },
+  { tab: 'settings', label: '设置', icon: React.createElement(FiSettings, { size: 13 }) },
 ]
 
 export function Panel({ useSessions, useWorkspaces, workspaces, sessions }: PanelProps) {
@@ -159,6 +161,9 @@ export function Panel({ useSessions, useWorkspaces, workspaces, sessions }: Pane
         </div>
         <div className={`ut-view ${state.tab === 'jobs' ? '' : 'hidden'}`}>
           <JobsView sessionId={current} useSessions={useSessions as never} />
+        </div>
+        <div className={`ut-view ${state.tab === 'settings' ? '' : 'hidden'}`}>
+          <SettingsView />
         </div>
       </div>
         </>

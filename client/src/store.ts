@@ -9,7 +9,7 @@
  * which tab the panel shows.
  */
 
-export type PanelTab = 'files' | 'terminal' | 'git' | 'jobs'
+export type PanelTab = 'files' | 'terminal' | 'git' | 'jobs' | 'settings'
 
 export interface PanelState {
   tab: PanelTab

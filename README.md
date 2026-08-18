@@ -42,6 +42,28 @@
 - 列出当前会话的后台任务(状态、kind、详情);
 - 单个任务关闭、一键全部关闭。
 
+### ✍️ 行内标记任务列表(替换 todo_write)
+
+参照 [pi-marker-tools](https://github.com/xing-shuyin/pi-marker-tools),把模型侧的 `todo_write` 工具替换为「写在回答正文里的 `[[todo:...]]` 行内标记」:
+
+- 状态类操作不再调用工具,直接在回复正文写标记,插件在消息结束时自动解析、执行、落库,不会中断回答;
+- 标记语法:`[[todo:new:写单元测试]]` 新建、`[[todo:set:2,completed]]` 改状态、`[[todo:remove:2]]` 删除、`[[todo:dep:2,blocks=1,3]]` 声明依赖、`[[todo:title:2:新标题]]` 重命名;
+- 富状态(带 id)内嵌进原生 `todo/write` 事件持久化(随分支跟随,resume 恢复;旧日志兼容读取 `marker/todos` 快照) —— 现有 TodoDock 任务条零改动直接生效;
+- 面板新增「设置」tab:可一键开关 marker 功能(停用时恢复原生 `todo_write` 工具、不再解析标记;切换即时生效,并持久化到 `~/.dsh-ui-tools/settings.json`,对所有工作区生效);
+- 只读查询走 `markers_list` 工具;`todo_write` 调用会被拒绝并给出指引;
+- 与 pi-marker-tools 一致:标记文本保留在消息原文,执行失败的标记留待下轮修正。
+
+### 🔊 声音提示(移植自 pi-web-ui)
+
+- 在「提问/审批弹窗、运行完成、开始运行、出错」四个时刻播放提示音,全部由 Web Audio API 合成(无音频文件、离线可用);
+- 工具面板「设置」tab 提供配置:总开关、各事件独立开关 + 试听、音量滑条,持久化到浏览器 localStorage,即时生效;
+- 与 pi-web-ui 的 `sounds.ts` + `SoundSettings.tsx` 一一对应。
+
+### 🎨 主题适配(dsh web 亮/暗/跟随系统)
+
+- 面板调色板全部引用 dsh 主题系统的 `--dsw-alias-*` token(`body` / `body[data-ds-dark-theme]` 上定义),随 shell 的主题切换(亮/暗/跟随系统、第三方注册主题)自动级联,无需 JS 参与;
+- xterm 终端通过观察 `body[data-ds-dark-theme]` 实时重绘画布配色(背景/前景/光标读 shell token,ANSI 16 色用亮暗两套调色板)。
+
 ---
 
 ## 📸 截图
@@ -119,6 +141,7 @@ dsh-ui-tools/
 | `client/src/GitView.tsx` + `git-parse.ts` | `web/src/components/SCMPanel.tsx` |
 | `client/src/FilesView.tsx` + `FilePreview.tsx` | `web/src/components/RightPanel.tsx` + `FilePreview.tsx` |
 | 提及(随问题发送) | pi-web-ui 的 attachment(`inline` / `reference` / `lines`) |
+| 声音提示(Web Audio 合成 + 设置) | `web/src/sounds.ts` + `web/src/components/SoundSettings.tsx` |
 
 ---
 

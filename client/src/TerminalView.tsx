@@ -15,6 +15,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { api, encodeCwd, type CommandDef } from './api'
 import { FiEdit2, FiPlay, FiPlus, FiRefreshCw, FiTerminal, FiTrash2, FiX } from './icons'
 import { termStore, type TermCommand, type TermTab } from './store'
+import { themeStore } from './theme'
 
 interface TerminalViewProps {
   cwd: string
@@ -23,6 +24,50 @@ interface TerminalViewProps {
   /** True when the panel is too narrow for the two-pane layout (side column
    *  becomes a drawer). */
   narrow?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// xterm 配色：跟随 dsh 主题切换。背景/前景/光标读 shell 的 --dsw-alias-* token
+// （任何主题，包括第三方注册主题都能对齐），ANSI 16 色用亮/暗两套固定调色板。
+// ---------------------------------------------------------------------------
+
+/** 读取 body 上定义的 CSS 变量（computed value 已解析 var() 链）。 */
+function readBodyVar(name: string, fallback: string): string {
+  try {
+    const v = getComputedStyle(document.body).getPropertyValue(name).trim()
+    return v || fallback
+  } catch {
+    return fallback
+  }
+}
+
+const DARK_ANSI: Record<string, string> = {
+  black: '#1a1d26', red: '#f87171', green: '#34d399', yellow: '#fbbf24',
+  blue: '#60a5fa', magenta: '#c084fc', cyan: '#22d3ee', white: '#e6e8ef',
+  brightBlack: '#6b7284', brightRed: '#f87171', brightGreen: '#34d399',
+  brightYellow: '#fbbf24', brightBlue: '#60a5fa', brightMagenta: '#c084fc',
+  brightCyan: '#22d3ee', brightWhite: '#ffffff',
+}
+const LIGHT_ANSI: Record<string, string> = {
+  black: '#3f3f46', red: '#dc2626', green: '#16a34a', yellow: '#d97706',
+  blue: '#2563eb', magenta: '#9333ea', cyan: '#0891b2', white: '#f4f4f5',
+  brightBlack: '#71717a', brightRed: '#ef4444', brightGreen: '#22c55e',
+  brightYellow: '#f59e0b', brightBlue: '#3b82f6', brightMagenta: '#a855f7',
+  brightCyan: '#06b6d4', brightWhite: '#ffffff',
+}
+
+function buildXtermTheme(): Record<string, string> {
+  const dark = themeStore.get()
+  const bg = readBodyVar('--dsw-alias-bg-base', dark ? '#0b0d12' : '#ffffff')
+  const fg = readBodyVar('--dsw-alias-label-primary', dark ? '#e6e8ef' : '#1f2937')
+  return {
+    background: bg,
+    foreground: fg,
+    cursor: fg,
+    cursorAccent: bg,
+    selectionBackground: dark ? 'rgba(139, 92, 246, 0.35)' : 'rgba(59, 130, 246, 0.25)',
+    ...(dark ? DARK_ANSI : LIGHT_ANSI),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -47,12 +92,19 @@ function TermXterm({ tab, active }: TermXtermProps) {
       fontSize: 13,
       cursorBlink: true,
       scrollback: 8000,
+      theme: buildXtermTheme(),
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(container)
     instRef.current = { term, fit }
     if (active) term.focus()
+
+    // 主题切换 → 重绘 xterm 配色。
+    const offTheme = themeStore.subscribe(() => {
+      const inst = instRef.current
+      if (inst) inst.term.options.theme = buildXtermTheme()
+    })
 
     // Ctrl+V / Cmd+V → browser-native paste; Ctrl+C with a selection → copy.
     term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
@@ -157,6 +209,7 @@ function TermXterm({ tab, active }: TermXtermProps) {
       disposed = true
       cancelAnimationFrame(raf)
       clearInterval(hb)
+      offTheme()
       onData.dispose()
       ro?.disconnect()
       es?.close()

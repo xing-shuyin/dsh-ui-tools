@@ -3,3 +3,6 @@ client/bundle-body.js
 .dsh-ui-tools/
 *.log
 .DS_Store
+.session-fix/
+awesome-dsh-plugin/
+
