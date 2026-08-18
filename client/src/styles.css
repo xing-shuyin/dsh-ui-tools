@@ -17,6 +17,34 @@
 [data-slot="conversation.session.header"] > header > [role="tablist"] {
 	margin-top: 0;
 	padding-left: 0;
+	gap: 6px;
+}
+/* Tabs become pills matching the header's other controls. */
+[data-slot="conversation.session.header"] > header > [role="tablist"] button {
+	min-width: 0;
+	margin: 0;
+	padding: 6px 14px;
+	border: 1px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.12));
+	border-radius: 999px;
+	background: transparent;
+	color: var(--dsw-alias-label-secondary, #9aa1b4);
+	line-height: 20px;
+}
+[data-slot="conversation.session.header"] > header > [role="tablist"] button::after {
+	display: none;
+}
+[data-slot="conversation.session.header"] > header > [role="tablist"] button:hover {
+	background: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06));
+}
+[data-slot="conversation.session.header"] > header > [role="tablist"] button[aria-selected="true"] {
+	background: color-mix(in srgb, var(--dsw-alias-state-business-primary, #4176e6) 14%, transparent);
+	border-color: var(--dsw-alias-state-business-primary, #4176e6);
+	color: var(--dsw-alias-state-business-primary, #4176e6);
+	font-weight: 500;
+}
+/* Compact the hard-coded "log" pill (shell sets min-width 111px). */
+[data-slot="conversation.session.header"] > header button {
+	min-width: 0;
 }
 
 /* =========================================================================
