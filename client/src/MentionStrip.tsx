@@ -59,9 +59,11 @@ export function MentionStrip({ session, useSessions }: MentionStripProps) {
     return () => clearInterval(timer)
   }, [sessionId, files.length])
 
-  // Align the strip with the composer's textarea left edge: the composer's
-  // horizontal padding differs across layouts (hero vs conversation, panel
-  // width), so read the live offset and apply it as the strip padding.
+  // Align the strip with the composer's textarea left edge — robust across
+  // every width change (panel drag resizes the layout frame and the
+  // textarea, but not the window/body, so window-resize alone misses it):
+  // observe the textarea, the layout frame and our own panel, plus a cheap
+  // interval as the safety net.
   React.useEffect(() => {
     if (files.length === 0) return
     const align = () => {
@@ -74,14 +76,25 @@ export function MentionStrip({ session, useSessions }: MentionStripProps) {
     }
     align()
     window.addEventListener('resize', align)
-    let ro: ResizeObserver | null = null
+    const ros: ResizeObserver[] = []
     if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(align)
-      ro.observe(document.body)
+      const targets = [
+        document.querySelector('textarea'),
+        document.querySelector('[data-ut-layout]'),
+        document.querySelector('.ut-panel'),
+      ]
+      for (const t of targets) {
+        if (!t) continue
+        const ro = new ResizeObserver(align)
+        ro.observe(t)
+        ros.push(ro)
+      }
     }
+    const timer = setInterval(align, 300)
     return () => {
       window.removeEventListener('resize', align)
-      ro?.disconnect()
+      for (const ro of ros) ro.disconnect()
+      clearInterval(timer)
     }
   }, [files.length])
 
