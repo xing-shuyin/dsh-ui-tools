@@ -72,7 +72,7 @@ dsh plugin --profile web add github:xing-shuyin/dsh-ui-tools
 }
 ```
 
-重启 `dsh web` 并刷新页面。会话标题栏右侧出现 **文件 / 终端 / Git / 任务** 按钮,点击打开右侧面板。
+重启 `dsh web` 并刷新页面。右侧工具面板默认展开;收起后点击右侧边缘的悬浮 🛠️ 按钮即可重新打开。
 
 > ⚠️ 注意:终端使用 `node-pty` 在 dsh 进程内直接启动 shell,不经过 dsh 的沙箱 —— 与 pi-web-ui 一致。
 
