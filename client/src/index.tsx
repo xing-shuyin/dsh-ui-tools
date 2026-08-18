@@ -19,6 +19,7 @@ import xtermCss from '@xterm/xterm/css/xterm.css'
 import { Panel } from './Panel'
 import { MentionStrip } from './MentionStrip'
 import { initLayoutControl } from './layout'
+import { replaceSessionLogLabel } from './shell-labels'
 
 export const name = 'dsh-ui-tools'
 
@@ -36,6 +37,8 @@ export function apply(ctx: any) {
   }, 'dsh-ui-tools: styles')
 
   ctx.effect(() => initLayoutControl(), 'dsh-ui-tools: layout width')
+
+  ctx.effect(() => replaceSessionLogLabel(), 'dsh-ui-tools: shell labels')
 
   const slots = ctx.slots
   const workspacesSvc = ctx.workspaces
