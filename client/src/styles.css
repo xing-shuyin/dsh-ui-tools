@@ -963,6 +963,18 @@
 	border-left: 1px solid var(--border-soft);
 	padding-left: 14px;
 }
+.term-strip-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	flex-shrink: 0;
+}
+.term-strip-head-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
 .term-strip .panel-title {
 	flex-shrink: 0;
 	font-size: 11px;

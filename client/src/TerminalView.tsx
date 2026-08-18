@@ -416,7 +416,17 @@ export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps)
           /* One row: quick-command strip + terminal-tab strip (horizontal). */
           <div className="term-strips">
             <div className="term-strip">
-              <span className="panel-title">快捷命令</span>
+              <div className="term-strip-head">
+                <span className="panel-title">快捷命令</span>
+                <div className="term-strip-head-actions">
+                  <button type="button" className="panel-refresh" title="刷新" onClick={() => void refreshCommands()}>
+                    <FiRefreshCw size={13} />
+                  </button>
+                  <button type="button" className="panel-new" title="新建命令" onClick={startNew}>
+                    <FiPlus size={14} />
+                  </button>
+                </div>
+              </div>
               <div className="term-strip-row">
                 {cmdWarning && <span className="cmd-strip-warn" title={cmdWarning}>⚠</span>}
                 {commands.length === 0 && !cmdWarning && (
@@ -454,17 +464,18 @@ export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps)
                     </button>
                   </div>
                 ))}
-                <button type="button" className="panel-new" title="新建命令" onClick={startNew}>
-                  <FiPlus size={14} />
-                </button>
-                <button type="button" className="panel-refresh" title="刷新" onClick={() => void refreshCommands()}>
-                  <FiRefreshCw size={13} />
-                </button>
               </div>
             </div>
 
             <div className="term-strip">
-              <span className="panel-title">终端</span>
+              <div className="term-strip-head">
+                <span className="panel-title">终端</span>
+                <div className="term-strip-head-actions">
+                  <button type="button" className="panel-new" title="新建终端" onClick={openShell}>
+                    <FiPlus size={14} />
+                  </button>
+                </div>
+              </div>
               <div className="term-strip-row">
                 {tabs.length === 0 && <span className="cmd-strip-empty">没有打开的终端</span>}
                 {tabs.map((tab) => (
@@ -486,9 +497,6 @@ export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps)
                     </button>
                   </div>
                 ))}
-                <button type="button" className="panel-new" title="新建终端" onClick={openShell}>
-                  <FiPlus size={14} />
-                </button>
               </div>
             </div>
           </div>
