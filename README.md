@@ -26,22 +26,24 @@ npm install        # 需要允许 esbuild / node-pty 的安装脚本
 npm run build      # 生成 client/client.js
 ```
 
-## 安装到 dsh web
+## 安装到 dsh web(无需克隆项目)
+
+插件已发布到 npm([dsh-ui-tools](https://www.npmjs.com/package/dsh-ui-tools))与 [GitHub](https://github.com/xing-shuyin/dsh-ui-tools),其他用户直接安装即可:
 
 ```bash
-# 1. 构建插件(见上)
-cd /Volumes/P/project/dsh-ui-tools && npm run build
+# 方式一:从 npm 安装(推荐)
+dsh plugin --profile web add dsh-ui-tools
 
-# 2. 把插件装进 web profile(等价于在 ~/.dsh/profiles/web 里执行 pnpm add)
-dsh plugin --profile web add /Volumes/P/project/dsh-ui-tools
+# 方式二:从 GitHub 安装
+dsh plugin --profile web add github:xing-shuyin/dsh-ui-tools
 ```
 
-3. 编辑 `~/.dsh/profiles/web/package.json`,把 `dsh-ui-tools` 加进 `dsh.profile.bundles` 列表(排在已有 bundle 之后):
+然后把 `dsh-ui-tools` 加进 `~/.dsh/profiles/web/package.json` 的 `dsh.profile.bundles`(排在已有 bundle 之后):
 
 ```json
 {
   "dependencies": {
-    "dsh-ui-tools": "link:/Volumes/P/project/dsh-ui-tools"
+    "dsh-ui-tools": "^0.1.0"
   },
   "dsh": {
     "profile": {
@@ -55,11 +57,12 @@ dsh plugin --profile web add /Volumes/P/project/dsh-ui-tools
 }
 ```
 
-4. 重启 `dsh web`。刷新页面后:
+最后重启 `dsh web`。刷新页面后:
 
-- 会话标题栏右侧出现 **📁 文件 / 🖥️ 终端 / ⑂ Git** 按钮,右侧浮出工具面板(默认展开);
-- 文件标签页列出当前工作区文件树,点文件预览/编辑,点「＋」把文件加入输入框上方的提及条;
-- 发送问题时,提及的文件内容会自动随消息一起发送给 Agent(由 Host 在 `agent/pre-step` 时把文件内容拼进用户消息,随后清空提及)。
+- 会话标题栏右侧出现 **📁 文件 / 🖥️ 终端 / ⑂ Git / 任务** 按钮,右侧嵌入工具面板(默认展开,可拖拽调宽、可收起);
+- 文件标签页列出当前工作区文件(面包屑导航),点文件预览/编辑,点「＋」把文件加入输入框上方的提及条(与输入框自动对齐);
+- 发送问题时,提及的文件内容会自动随消息一起发送给 Agent(由 Host 在 `agent/pre-step` 时把文件内容拼进用户消息,随后清空提及);
+- 终端支持多标签页与快捷命令(名称/命令/运行目录);Git 面板支持更改列表/差异/历史与 commit/push/pull/分支切换;任务页可关闭后台任务。
 
 > 注意:终端使用 `node-pty` 在 dsh 进程内直接启动 shell,不经过 dsh 的沙箱 —— 与 pi-web-ui 一致。
 
