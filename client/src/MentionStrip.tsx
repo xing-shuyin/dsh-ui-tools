@@ -20,6 +20,7 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null
 
 export function MentionStrip({ session, useSessions }: MentionStripProps) {
   const files = useMentions()
+  const stripRef = React.useRef<HTMLDivElement>(null)
   const sessionId = session?.sessionId ?? ''
   // SnapshotSelectorHook requires a selector: useSessions((s) => ...).
   const byId = useSessions ? useSessions((s) => s?.byId ?? {}) : undefined
@@ -58,10 +59,36 @@ export function MentionStrip({ session, useSessions }: MentionStripProps) {
     return () => clearInterval(timer)
   }, [sessionId, files.length])
 
+  // Align the strip with the composer's textarea left edge: the composer's
+  // horizontal padding differs across layouts (hero vs conversation, panel
+  // width), so read the live offset and apply it as the strip padding.
+  React.useEffect(() => {
+    if (files.length === 0) return
+    const align = () => {
+      const strip = stripRef.current
+      const ta = document.querySelector('textarea')
+      if (!strip || !ta) return
+      const gap = Math.max(0, Math.round(ta.getBoundingClientRect().x - strip.getBoundingClientRect().x))
+      strip.style.paddingLeft = `${gap}px`
+      strip.style.paddingRight = `${gap}px`
+    }
+    align()
+    window.addEventListener('resize', align)
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(align)
+      ro.observe(document.body)
+    }
+    return () => {
+      window.removeEventListener('resize', align)
+      ro?.disconnect()
+    }
+  }, [files.length])
+
   if (files.length === 0) return null
 
   return (
-    <div className="ut-theme ut-mentions">
+    <div ref={stripRef} className="ut-theme ut-mentions">
       {files.map((f) => (
         <div key={mentionKey(f)} className="ut-mention-row" title={mentionTitle(f)}>
           <span className="ut-mention-tag">{f.isDir ? '[引用]' : '[文件]'}</span>
