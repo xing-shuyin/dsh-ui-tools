@@ -554,8 +554,7 @@
 	color: var(--text-dim);
 	cursor: pointer;
 	font-size: 12px;
-	padding: 0 6px;
-	width: auto;
+	flex-shrink: 0;
 }
 .fp-attach.inline:hover {
 	background: var(--accent);

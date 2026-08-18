@@ -173,44 +173,50 @@ export function FilePreview({ cwd, path, name, onClose, onSaved }: FilePreviewPr
             {loaded && kind === 'text' && !isBinary && `${lineCount} 行 · `}
             {loaded && formatSize(loaded.size)}
           </span>
-          <div className="fp-actions">
+          <div className="fp-head-actions">
             {isMarkdown && kind === 'text' && !isBinary && loaded && (
               <button
                 type="button"
-                className={`fp-btn ${markdownPreview ? 'on' : ''}`}
-                title={markdownPreview ? '显示源码' : '显示预览'}
+                className={`fp-attach wrap ${markdownPreview ? 'on' : ''}`}
+                data-tip={markdownPreview ? '显示源码' : '显示预览'}
                 disabled={editing}
                 onClick={() => setMarkdownPreview((v) => !v)}
               >
                 {markdownPreview ? React.createElement(FiCode, { size: 13 }) : React.createElement(FiEye, { size: 13 })}
-                {markdownPreview ? ' 源码' : ' 预览'}
               </button>
             )}
             {kind === 'text' && !isBinary && loaded && (
               <button
                 type="button"
-                className={`fp-btn ${editing ? 'on' : ''}`}
-                title={truncatedLines ? '文件过大，无法编辑' : editing ? '退出编辑' : '编辑'}
+                className={`fp-attach edit ${editing ? 'on' : ''}`}
+                data-tip={truncatedLines ? '文件过大，无法编辑' : editing ? '退出编辑' : '编辑'}
                 disabled={!canEdit && !editing}
                 onClick={toggleEditing}
               >
-                <FiEdit3 size={13} /> 编辑
+                <FiEdit3 size={13} />
               </button>
             )}
             {kind === 'text' && !isBinary && !showMarkdown && (
               <button
                 type="button"
-                className={`fp-btn ${wrap ? 'on' : ''}`}
-                title={wrap ? '关闭自动换行' : '开启自动换行'}
+                className={`fp-attach wrap ${wrap ? 'on' : ''}`}
+                data-tip={wrap ? '关闭自动换行' : '开启自动换行'}
                 onClick={() => setWrap((w) => !w)}
               >
-                <FiCornerDownLeft size={13} /> 换行
+                <FiCornerDownLeft size={13} />
               </button>
             )}
-            <button type="button" className="fp-btn" title="提及文件（随下一条消息发送）" onClick={addWholeFile}>
-              ＋提及
+            <button
+              type="button"
+              className="fp-attach inline"
+              data-tip="提及文件（随下一条消息发送）"
+              onClick={addWholeFile}
+            >
+              <FiPlus size={13} />
             </button>
-            <button type="button" className="fp-btn" title="关闭" onClick={onClose}>✕</button>
+            <button type="button" className="fp-close" title="关闭" onClick={onClose}>
+              <FiX size={14} />
+            </button>
           </div>
         </div>
 
@@ -290,9 +296,9 @@ export function FilePreview({ cwd, path, name, onClose, onSaved }: FilePreviewPr
           {editing ? (
             <>
               <span className="fp-hint">编辑中 — Ctrl/Cmd+S 保存</span>
-              <div className="fp-actions-row">
-                <button type="button" className="fp-btn" onClick={toggleEditing}>取消</button>
-                <button type="button" className="fp-btn primary" disabled={draft === (loaded?.text ?? '')} onClick={() => void save()}>
+              <div className="fp-actions">
+                <button type="button" className="btn" onClick={toggleEditing}>取消</button>
+                <button type="button" className="btn primary" disabled={draft === (loaded?.text ?? '')} onClick={() => void save()}>
                   <FiSave size={13} /> 保存
                 </button>
               </div>
@@ -305,11 +311,11 @@ export function FilePreview({ cwd, path, name, onClose, onSaved }: FilePreviewPr
                     ? `已选 ${selCount} 行（${sel.start}–${sel.end}）`
                     : '点击/拖动选择行，可把选中行提及给 Agent'}
                 </span>
-                <div className="fp-actions-row">
-                  <button type="button" className="fp-btn" disabled={lines.length === 0} onClick={selectAll}>全选</button>
-                  <button type="button" className="fp-btn" disabled={!sel} onClick={() => setSel(null)}>清除</button>
-                  <button type="button" className="fp-btn primary" disabled={!sel || isBinary} onClick={addLines}>
-                    {added ? React.createElement(FiCheck, { size: 13 }) : React.createElement(FiLink, { size: 13 })}
+                <div className="fp-actions">
+                  <button type="button" className="btn" disabled={lines.length === 0} onClick={selectAll}>全选</button>
+                  <button type="button" className="btn" disabled={!sel} onClick={() => setSel(null)}>清除</button>
+                  <button type="button" className="btn primary" disabled={!sel || isBinary} onClick={addLines}>
+                    {added ? React.createElement(FiCheck, { size: 13 }) : null}
                     {added ? ' 已加入' : ' 提及选中行'}
                   </button>
                 </div>
