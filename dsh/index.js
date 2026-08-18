@@ -14,8 +14,10 @@
  *     (commit/push/pull/checkout) run in a visible terminal tab.
  *   - File mentions: the client keeps a per-session "mention" list (files the
  *     user picked to ride along with the next question). When the agent's
- *     next step claims the user message, this plugin enriches that message
- *     with the mentioned files' content, then clears the list.
+ *     next step claims the user message, this plugin inserts one lightweight
+ *     path-only reference message per mentioned file right before it (the
+ *     content is NOT attached — the agent reads files itself with the read
+ *     tool as needed, like other agent UIs), then clears the list.
  *
  * The package root export is this module; the loader imports it by name.
  */
@@ -39,7 +41,6 @@ export const name = 'dsh-ui-tools'
 
 const MAX_PREVIEW_BYTES = 512 * 1024
 const MAX_SAVE_BYTES = 2 * 1024 * 1024
-const MAX_MENTION_BYTES = 512 * 1024
 const MAX_MENTION_FILES = 50
 const COMMANDS_DIR = '.dsh-ui-tools'
 const COMMANDS_FILE = 'commands.json'
@@ -542,23 +543,6 @@ function runGit(cwd, args, timeoutMs = 20_000) {
   })
 }
 
-/** Read one workspace file for the mention feature (capped). */
-async function readMentionText(cwd, relPath) {
-  const wp = workspacePath(cwd, relPath)
-  if (!wp) return null
-  const { open } = await import('node:fs/promises')
-  const st = await statSyncSafe(wp.abs)
-  if (!st || !st.isFile()) return null
-  const handle = await open(wp.abs, 'r')
-  try {
-    const buf = Buffer.alloc(Math.min(st.size, MAX_MENTION_BYTES))
-    const { bytesRead } = await handle.read(buf, 0, buf.length, 0)
-    return { text: decodeText(buf.subarray(0, bytesRead)), truncated: bytesRead < st.size, size: st.size }
-  } finally {
-    await handle.close()
-  }
-}
-
 async function statSyncSafe(p) {
   try { return statSync(p) } catch { return null }
 }
@@ -567,51 +551,28 @@ async function statSyncSafe(p) {
 // mention store + message enrichment
 // ---------------------------------------------------------------------------
 
-/** Build the text blocks attached to the user's message for the mentioned files. */
-async function buildMentionBlocks(mention, cwd) {
-  const blocks = []
-  const files = (mention.files || []).slice(0, MAX_MENTION_FILES)
-  for (const f of files) {
-    const name = String(f.name || (f.path || '').split('/').pop() || f.path)
+/**
+ * Build one lightweight path-only reference text per mentioned file. No file
+ * content is read or attached: the agent holds the workspace cwd and reads
+ * files itself (read tool) as needed — like other agent UIs.
+ */
+function buildMentionRefs(files) {
+  const out = []
+  for (const f of (files || []).slice(0, MAX_MENTION_FILES)) {
+    const path = String(f.path || '')
+    if (!path) continue
     if (f.mode === 'reference' || f.isDir) {
-      blocks.push({ type: 'text', text: `[引用] ${f.path}` })
+      out.push(`[引用] \`${path}\``)
       continue
     }
-    let content
-    let truncated = false
-    try {
-      const read = await readMentionText(cwd, f.path)
-      if (!read) {
-        blocks.push({ type: 'text', text: `[文件] ${f.path}\n（读取失败或不存在）` })
-        continue
-      }
-      content = read.text
-      truncated = read.truncated
-    } catch (err) {
-      blocks.push({ type: 'text', text: `[文件] ${f.path}\n（读取失败：${err.message}）` })
-      continue
-    }
+    let text = `[文件] \`${path}\``
     if (f.mode === 'lines' && f.lines && f.lines.start >= 1) {
-      const all = content.split('\n')
-      const start = f.lines.start
-      const end = Math.min(f.lines.end || start, all.length)
-      content = all.slice(start - 1, end).join('\n')
+      const end = Math.max(f.lines.start, f.lines.end || f.lines.start)
+      text += `（第 ${f.lines.start}–${end} 行）`
     }
-    const ext = extname(name).replace(/^\./, '')
-    const cap = 256 * 1024
-    if (content.length > cap) {
-      content = content.slice(0, cap)
-      truncated = true
-    }
-    let text = `[文件] ${f.path}`
-    if (f.mode === 'lines' && f.lines) {
-      text += `（第 ${f.lines.start}–${f.lines.end} 行）`
-    }
-    text += `\n\`\`\`${ext}\n${content}\n\`\`\``
-    if (truncated) text += '\n（文件内容过长，已截断）'
-    blocks.push({ type: 'text', text })
+    out.push(text)
   }
-  return blocks
+  return out
 }
 
 // ---------------------------------------------------------------------------
@@ -662,15 +623,14 @@ export function apply(ctx) {
   const jobsSvc = ctx.get('jobs')
   const agentsSvc = ctx.get('agents')
 
-  // ---- mention enrichment: attach mentioned files to the next user message ----
+  // ---- mention enrichment: insert path-only reference messages before the
+  // next user message (no content attached — the agent reads files itself) ----
   const offPreStep = ctx.on('agent/pre-step', async (payload, next) => {
     const decision = await next()
     if (!decision || decision.kind !== 'enter') return decision
     const sessionId = payload.agent.session.id
     const mention = mentionsBySession.get(sessionId)
     if (!mention || !mention.files || mention.files.length === 0) return decision
-    const cwd = mention.cwd || payload.agent.session.header?.cwd
-    if (!cwd) return decision
     // Find the first un-enriched real user message entering this step
     // (the trailing runtime-context message has source.kind 'plugin' and is
     // never touched).
@@ -678,14 +638,28 @@ export function apply(ctx) {
       m && m.role === 'user' && (!m.source || m.source.kind === 'user') && !enrichedIds.has(m.id)
     )
     if (!target) return decision
-    const blocks = await buildMentionBlocks(mention, cwd)
+    const refs = buildMentionRefs(mention.files)
     enrichedIds.add(target.id)
     // Bound the guard set so a very long-lived process does not grow it forever.
     if (enrichedIds.size > 10_000) enrichedIds.clear()
     mentionsBySession.delete(sessionId)
-    const messages = decision.messages.map((m) =>
-      m === target ? { ...m, content: [...m.content, ...blocks] } : m,
-    )
+    if (refs.length === 0) return decision
+    // One separate user message per referenced file, sent together with the
+    // user's question — like other agent UIs (paths only; the agent reads the
+    // files with the read tool as needed). source.kind 'plugin' keeps these
+    // out of the next enrichment pass.
+    const idx = decision.messages.indexOf(target)
+    const refMessages = refs.map((text, i) => ({
+      ...target,
+      id: `${target.id}#ref${i + 1}`,
+      content: [{ type: 'text', text }],
+      source: { kind: 'plugin', plugin: 'dsh-ui-tools', reason: 'file-reference' },
+    }))
+    const messages = [
+      ...decision.messages.slice(0, idx),
+      ...refMessages,
+      ...decision.messages.slice(idx),
+    ]
     return { kind: 'enter', messages }
   })
   disposers.push(offPreStep)
