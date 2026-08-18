@@ -955,8 +955,8 @@
 }
 .terminal-view.narrow .term-side {
 	width: 100%;
-	flex: 0 1 auto;
-	max-height: 46%;
+	flex: 1 1 auto;
+	max-height: 62%;
 	border-right: none;
 	border-bottom: 1px solid var(--border);
 }
@@ -1261,8 +1261,8 @@
 }
 .terminal-view.narrow .term-side {
 	width: 100%;
-	flex: 0 1 auto;
-	max-height: 46%;
+	flex: 1 1 auto;
+	max-height: 62%;
 	border-right: none;
 	border-bottom: 1px solid var(--border);
 }

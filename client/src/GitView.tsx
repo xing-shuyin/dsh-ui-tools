@@ -107,13 +107,14 @@ export function GitView({ cwd, narrow = false }: GitViewProps) {
       setFileDiff({ file: f, staged: '', worktree: '', untracked: true })
       return
     }
-    const esc = f.path.replace(/'/g, `'\\''`)
     setDiffLoading(true)
     setError(null)
     try {
+      // execFile passes argv directly (no shell) — pass the raw path, never
+      // shell-quoted (pi-web-ui's quotes were for its bash-based query PTY).
       const [staged, worktree] = await query([
-        [...GIT, 'diff', '--cached', '--', `'${esc}'`],
-        [...GIT, 'diff', '--', `'${esc}'`],
+        [...GIT, 'diff', '--cached', '--', f.path],
+        [...GIT, 'diff', '--', f.path],
       ])
       setFileDiff({ file: f, staged, worktree, untracked: false })
     } catch (err) {
@@ -131,9 +132,8 @@ export function GitView({ cwd, narrow = false }: GitViewProps) {
     setCommitLoading(true)
     setError(null)
     try {
-      const esc = commit.hash.replace(/'/g, `'\\''`)
       const [detail] = await query([
-        [...GIT, 'show', '--no-ext-diff', '--find-renames', '--format=fuller', '--stat', '--patch', `'${esc}'`],
+        [...GIT, 'show', '--no-ext-diff', '--find-renames', '--format=fuller', '--stat', '--patch', commit.hash],
       ])
       setCommitDetail(detail)
     } catch (err) {
