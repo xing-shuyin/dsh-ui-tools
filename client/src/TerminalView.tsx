@@ -366,147 +366,140 @@ export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps)
 
   return (
     <div className="ut-view" data-ut-view="terminal">
-      <div className={`terminal-view${narrow ? ' narrow' : ''}`}>
-        {/* Left: the workspace quick-command list on top + terminal tabs below
-            (pi-web-ui TerminalPanel desktop layout; stacks above the xterm
-            when the panel is narrow). */}
-        <aside className="term-side term-commands">
-          <div className="panel-header">
-            <span className="panel-title">快捷命令</span>
-            <div className="panel-header-actions">
-              <button type="button" className="panel-refresh" title="刷新" onClick={() => void refreshCommands()}>
-                <FiRefreshCw size={13} />
-              </button>
-              <button type="button" className="panel-new" title="新建命令" onClick={startNew}>
-                <FiPlus size={14} />
-              </button>
-            </div>
-          </div>
-
-          <div className="panel-body">
-            {cmdWarning && <div className="panel-empty" style={{ fontSize: 11 }}>{cmdWarning}</div>}
-            {editing ? (
-              <div className="cmd-form">
-                <label>名称</label>
-                <input
-                  className="cmd-input"
-                  value={draft.name}
-                  placeholder="例如：启动开发服务"
-                  autoFocus
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                />
-                <label>命令</label>
-                <input
-                  className="cmd-input"
-                  value={draft.command}
-                  placeholder="例如：npm run dev"
-                  onChange={(e) => setDraft({ ...draft, command: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) void saveDraft()
-                  }}
-                />
-                <label>运行目录（${'{pwd}'} = 会话工作区）</label>
-                <input
-                  className="cmd-input"
-                  value={draft.cwd}
-                  placeholder="${pwd}"
-                  onChange={(e) => setDraft({ ...draft, cwd: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) void saveDraft()
-                  }}
-                />
-                <div className="cmd-form-actions">
-                  <button type="button" className="btn" onClick={cancelEdit}>取消</button>
-                  <button
-                    type="button"
-                    className="btn primary"
-                    disabled={!draft.name.trim() || !draft.command.trim()}
-                    onClick={() => void saveDraft()}
-                  >
-                    保存
-                  </button>
-                </div>
+      <div className="terminal-view">
+        {editing ? (
+          /* Command edit form — replaces the strips while editing. */
+          <div className="cmd-form-block">
+            <div className="cmd-form">
+              <label>名称</label>
+              <input
+                className="cmd-input"
+                value={draft.name}
+                placeholder="例如：启动开发服务"
+                autoFocus
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
+              <label>命令</label>
+              <input
+                className="cmd-input"
+                value={draft.command}
+                placeholder="例如：npm run dev"
+                onChange={(e) => setDraft({ ...draft, command: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) void saveDraft()
+                }}
+              />
+              <label>运行目录（${'{pwd}'} = 会话工作区）</label>
+              <input
+                className="cmd-input"
+                value={draft.cwd}
+                placeholder="${pwd}"
+                onChange={(e) => setDraft({ ...draft, cwd: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) void saveDraft()
+                }}
+              />
+              <div className="cmd-form-actions">
+                <button type="button" className="btn" onClick={cancelEdit}>取消</button>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={!draft.name.trim() || !draft.command.trim()}
+                  onClick={() => void saveDraft()}
+                >
+                  保存
+                </button>
               </div>
-            ) : commands.length === 0 ? (
-              <div className="panel-empty">还没有快捷命令，点 ＋ 添加</div>
-            ) : (
-              commands.map((c, i) => (
-                <div key={i} className="cmd-item">
-                  <button
-                    type="button"
-                    className="cmd-run"
-                    title={`运行：${c.command}${c.cwd ? `\n目录：${c.cwd}` : ''}`}
-                    onClick={() => runCommand(c)}
-                  >
-                    <FiPlay size={12} />
-                  </button>
-                  <button
-                    type="button"
-                    className="cmd-main"
-                    title={`${c.command}${c.cwd ? `\n目录：${c.cwd}` : ''}`}
-                    onClick={() => runCommand(c)}
-                  >
-                    <span className="cmd-name">{c.name}</span>
-                    <span className="cmd-command">{c.command}</span>
-                    {c.cwd && <span className="cmd-cwd">{c.cwd}</span>}
-                  </button>
-                  <button type="button" className="cmd-act" title="编辑" onClick={() => startEdit(i)}>
-                    <FiEdit2 size={12} />
-                  </button>
-                  <button
-                    type="button"
-                    className={`cmd-act del ${confirmDel === i ? 'confirm' : ''}`}
-                    title="删除"
-                    onClick={() => void requestDelete(i)}
-                  >
-                    {confirmDel === i ? '确认?' : <FiTrash2 size={12} />}
-                  </button>
-                </div>
-              ))
-            )}
+            </div>
           </div>
+        ) : (
+          /* One row: quick-command strip + terminal-tab strip (horizontal). */
+          <div className="term-strips">
+            <div className="term-strip">
+              <span className="panel-title">快捷命令</span>
+              <div className="term-strip-row">
+                {cmdWarning && <span className="cmd-strip-warn" title={cmdWarning}>⚠</span>}
+                {commands.length === 0 && !cmdWarning && (
+                  <span className="cmd-strip-empty">还没有快捷命令</span>
+                )}
+                {commands.map((c, i) => (
+                  <div key={i} className={`cmd-chip${confirmDel === i ? ' confirm' : ''}`}>
+                    <button
+                      type="button"
+                      className="cmd-run"
+                      title={`运行：${c.command}${c.cwd ? `\n目录：${c.cwd}` : ''}`}
+                      onClick={() => runCommand(c)}
+                    >
+                      <FiPlay size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      className="cmd-chip-main"
+                      title={`${c.command}${c.cwd ? `\n目录：${c.cwd}` : ''}`}
+                      onClick={() => runCommand(c)}
+                    >
+                      <span className="cmd-name">{c.name}</span>
+                      <span className="cmd-command">{c.command}</span>
+                    </button>
+                    <button type="button" className="cmd-act" title="编辑" onClick={() => startEdit(i)}>
+                      <FiEdit2 size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      className={`cmd-act del${confirmDel === i ? ' confirm' : ''}`}
+                      title="删除"
+                      onClick={() => void requestDelete(i)}
+                    >
+                      {confirmDel === i ? '确认?' : <FiTrash2 size={12} />}
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className="panel-new" title="新建命令" onClick={startNew}>
+                  <FiPlus size={14} />
+                </button>
+                <button type="button" className="panel-refresh" title="刷新" onClick={() => void refreshCommands()}>
+                  <FiRefreshCw size={13} />
+                </button>
+              </div>
+            </div>
 
-          {/* tabs (below the command list, same column) */}
-          <div className="term-tabs-block">
-            <div className="panel-header">
+            <div className="term-strip">
               <span className="panel-title">终端</span>
-              <button type="button" className="panel-new" title="新建终端" onClick={openShell}>
-                <FiPlus size={14} />
-              </button>
-            </div>
-            <div className="panel-body">
-              {tabs.length === 0 && (
-                <div className="panel-empty">没有打开的终端</div>
-              )}
-              {tabs.map((tab) => (
-                <div key={tab.id} className={`term-tab ${tab.id === activeId ? 'active' : ''}`}>
-                  <button
-                    type="button"
-                    className="term-tab-main"
-                    title={`${tab.cwd}${tab.command ? `\n> ${tab.command.command}` : ''}`}
-                    onClick={() => setActiveId(tab.id)}
-                  >
-                    <span className={`term-tab-dot ${tab.running ? 'run' : 'exit'}`} />
-                    <span className="term-tab-title">
-                      {tab.title}
-                      {!tab.running && <span className="term-tab-exit">（已退出 {tab.exitCode ?? ''}）</span>}
-                    </span>
-                  </button>
-                  <button type="button" className="term-tab-close" title="关闭终端" onClick={() => closeTab(tab.id)}>
-                    <FiX size={12} />
-                  </button>
-                </div>
-              ))}
+              <div className="term-strip-row">
+                {tabs.length === 0 && <span className="cmd-strip-empty">没有打开的终端</span>}
+                {tabs.map((tab) => (
+                  <div key={tab.id} className={`term-tab-chip ${tab.id === activeId ? 'active' : ''}`}>
+                    <button
+                      type="button"
+                      className="term-tab-main"
+                      title={`${tab.cwd}${tab.command ? `\n> ${tab.command.command}` : ''}`}
+                      onClick={() => setActiveId(tab.id)}
+                    >
+                      <span className={`term-tab-dot ${tab.running ? 'run' : 'exit'}`} />
+                      <span className="term-tab-title">
+                        {tab.title}
+                        {!tab.running && <span className="term-tab-exit">（已退出 {tab.exitCode ?? ''}）</span>}
+                      </span>
+                    </button>
+                    <button type="button" className="term-tab-close" title="关闭终端" onClick={() => closeTab(tab.id)}>
+                      <FiX size={12} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className="panel-new" title="新建终端" onClick={openShell}>
+                  <FiPlus size={14} />
+                </button>
+              </div>
             </div>
           </div>
-        </aside>
+        )}
 
         <div className="term-main">
           {tabs.length === 0 ? (
             <div className="term-empty">
               <FiTerminal className="term-empty-icon" size={34} />
               <div className="term-empty-title">内置终端</div>
-              <div className="term-empty-sub">点左侧「＋」新建终端，或点击快捷命令直接运行</div>
+              <div className="term-empty-sub">点击快捷命令直接运行，或点「＋」新建终端</div>
             </div>
           ) : (
             tabs.map((tab) => (
