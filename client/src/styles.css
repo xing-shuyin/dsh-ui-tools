@@ -938,21 +938,30 @@
 	position: relative;
 }
 
-/* One row: quick-command strip + terminal-tab strip (horizontal). */
+/* Top area: one row with two columns — quick commands (left) and terminal
+   tabs (right); each column lists its items vertically. */
 .term-strips {
 	flex-shrink: 0;
 	display: flex;
-	gap: 12px;
+	flex-direction: row;
+	gap: 14px;
 	padding: 8px 10px;
 	border-bottom: 1px solid var(--border-soft);
 	background: var(--bg-elev);
+	max-height: 46%;
+	min-height: 0;
 }
 .term-strip {
 	display: flex;
-	align-items: center;
-	gap: 8px;
+	flex-direction: column;
+	gap: 6px;
 	flex: 1;
 	min-width: 0;
+	min-height: 0;
+}
+.term-strip + .term-strip {
+	border-left: 1px solid var(--border-soft);
+	padding-left: 14px;
 }
 .term-strip .panel-title {
 	flex-shrink: 0;
@@ -960,16 +969,16 @@
 }
 .term-strip-row {
 	display: flex;
-	align-items: center;
-	gap: 6px;
+	flex-direction: column;
+	gap: 4px;
 	flex: 1;
-	min-width: 0;
-	overflow-x: auto;
-	overflow-y: hidden;
-	padding: 2px 0;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-right: 4px;
 }
 .term-strip-row::-webkit-scrollbar {
-	height: 4px;
+	width: 4px;
 }
 .term-strip-row::-webkit-scrollbar-thumb {
 	background: var(--border);
@@ -980,22 +989,23 @@
 	font-size: 12px;
 	color: var(--text-faint);
 	white-space: nowrap;
+	padding: 4px 2px;
 }
 .cmd-strip-warn {
 	color: var(--amber);
 }
 
-/* Command chips (one row, horizontal scroll). */
+/* Command chips — full-width vertical rows. */
 .cmd-chip {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
-	gap: 2px;
-	padding: 2px 4px 2px 2px;
+	gap: 4px;
+	padding: 3px 6px 3px 4px;
 	border: 1px solid var(--border);
 	border-radius: 7px;
 	background: var(--bg-elev2);
+	width: 100%;
 	flex-shrink: 0;
-	max-width: 260px;
 }
 .cmd-chip:hover {
 	border-color: var(--accent);
@@ -1119,15 +1129,15 @@
 
 /* Terminal tab chips (one row, horizontal scroll). */
 .term-tab-chip {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
 	gap: 2px;
 	padding: 3px 4px 3px 8px;
 	border: 1px solid var(--border);
 	border-radius: 7px;
 	background: var(--bg-elev2);
+	width: 100%;
 	flex-shrink: 0;
-	max-width: 240px;
 }
 .term-tab-chip:hover {
 	border-color: var(--border-soft);
