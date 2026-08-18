@@ -1,4 +1,25 @@
 /* =========================================================================
+ * Shell layout override: put the session header's title row and the view
+ * tabs (对话/轨迹) on ONE row instead of two. Targets the slot and the
+ * tablist's role, so it survives hashed-class renames.
+ * ========================================================================= */
+[data-slot="conversation.session.header"] > header {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0 24px;
+	padding-bottom: 12px;
+}
+[data-slot="conversation.session.header"] > header > :first-child {
+	flex: 1;
+	min-width: 0;
+}
+[data-slot="conversation.session.header"] > header > [role="tablist"] {
+	margin-top: 0;
+	padding-left: 0;
+}
+
+/* =========================================================================
  * dsh-ui-tools — styles ported 1:1 from pi-web-ui (dark "pi" theme).
  * The pi-web-ui palette is scoped under `.ut-theme` so it never leaks into
  * the dsh shell; every plugin root carries that class.

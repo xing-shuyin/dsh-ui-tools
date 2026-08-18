@@ -17,7 +17,6 @@ import * as React from 'react'
 import pluginCss from './styles.css'
 import xtermCss from '@xterm/xterm/css/xterm.css'
 import { Panel } from './Panel'
-import { HeaderActions } from './HeaderActions'
 import { MentionStrip } from './MentionStrip'
 import { initLayoutControl } from './layout'
 
@@ -54,13 +53,6 @@ export function apply(ctx: any) {
         workspaces: workspacesSvc,
         sessions: sessionsSvc,
       }),
-    ),
-  )
-
-  slots.inject('conversation.session.header.actions', () =>
-    slots.register(
-      { name: 'conversation.session.header.actions', id: 'dsh-ui-tools.header', order: 30 },
-      () => React.createElement(HeaderActions),
     ),
   )
 
