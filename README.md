@@ -48,9 +48,9 @@
 
 | 文件面板 + 文件提及 | Git 面板 |
 | --- | --- |
-| ![文件面板与文件提及](shots/shot1.jpeg) | ![Git 面板](shots/shot2.jpeg) |
+| ![文件面板与文件提及](https://raw.githubusercontent.com/xing-shuyin/dsh-ui-tools/main/shots/shot1.jpeg) | ![Git 面板](https://raw.githubusercontent.com/xing-shuyin/dsh-ui-tools/main/shots/shot2.jpeg) |
 | 多终端(快捷命令一键运行) | 文件面板(目录浏览) |
-| ![多终端](shots/shot3.jpeg) | ![文件面板](shots/shot4.jpeg) |
+| ![多终端](https://raw.githubusercontent.com/xing-shuyin/dsh-ui-tools/main/shots/shot3.jpeg) | ![文件面板](https://raw.githubusercontent.com/xing-shuyin/dsh-ui-tools/main/shots/shot4.jpeg) |
 
 ---
 
