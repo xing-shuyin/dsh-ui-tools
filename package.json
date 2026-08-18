@@ -1,6 +1,6 @@
 {
   "name": "dsh-ui-tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "dsh web 插件：项目文件查看器（可预览/编辑/提及文件）、多终端（快捷命令）、Git 面板（变更列表/推送拉取/分支切换）。功能移植自 pi-web-ui。",
   "type": "module",
   "main": null,
