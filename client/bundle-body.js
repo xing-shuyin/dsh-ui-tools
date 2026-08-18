@@ -1,8 +1,3 @@
-window.__ModuleLoader__.load({
-  id: "dsh-ui-tools",
-  factory: (require) => {
-    var module = { exports: {} };
-    var exports = module.exports;
 var Ba=Object.create;var ki=Object.defineProperty;var Ma=Object.getOwnPropertyDescriptor;var Ta=Object.getOwnPropertyNames;var La=Object.getPrototypeOf,Pa=Object.prototype.hasOwnProperty;var Na=(e,t)=>{for(var i in t)ki(e,i,{get:t[i],enumerable:!0})},Nr=(e,t,i,s)=>{if(t&&typeof t=="object"||typeof t=="function")for(let r of Ta(t))!Pa.call(e,r)&&r!==i&&ki(e,r,{get:()=>t[r],enumerable:!(s=Ma(t,r))||s.enumerable});return e};var Ze=(e,t,i)=>(i=e!=null?Ba(La(e)):{},Nr(t||!e||!e.__esModule?ki(i,"default",{value:e,enumerable:!0}):i,e)),Aa=e=>Nr(ki({},"__esModule",{value:!0}),e);var Hd={};Na(Hd,{apply:()=>Fd,inject:()=>zd,name:()=>Od});module.exports=Aa(Hd);var ss=Ze(require("react"),1);var Ar=`/* =========================================================================
  * dsh-ui-tools \u2014 styles ported 1:1 from pi-web-ui (dark "pi" theme).
  * The pi-web-ui palette is scoped under \`.ut-theme\` so it never leaks into
@@ -2259,7 +2254,3 @@ ${Ir}`,document.head.appendChild(r),()=>r.remove()},"dsh-ui-tools: styles"),e.ef
    *   Copyright (c) 2011 Fabrice Bellard
    *)
 */
-
-    return module.exports;
-  }
-});

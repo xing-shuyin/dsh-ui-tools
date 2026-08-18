@@ -1,0 +1,22 @@
+{
+  "commands": [
+    {
+      "name": "构建",
+      "command": "npm run build",
+      "cwd": "${pwd}"
+    },
+    {
+      "name": "启动",
+      "command": "npm run dev"
+    },
+    {
+      "name": "测试",
+      "command": "npm test"
+    },
+    {
+      "name": "ls",
+      "command": "ls",
+      "cwd": "${pwd}"
+    }
+  ]
+}

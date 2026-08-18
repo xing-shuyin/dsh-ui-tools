@@ -221,8 +221,8 @@ export function FilePreview({ cwd, path, name, onClose, onSaved }: FilePreviewPr
         </div>
 
         <div className="fp-body">
-          {error && <div className="panel-empty" style={{ color: 'var(--dsw-alias-state-error-primary)' }}>{error}</div>}
-          {loading && !loaded && <div className="panel-empty"><span className="spinner" /></div>}
+          {error && <div className="fp-empty" style={{ color: 'var(--red)' }}>{error}</div>}
+          {loading && !loaded && <div className="fp-empty"><span className="spinner" /></div>}
 
           {!loading && kind === 'image' && (
             <div className="fp-media-wrap">
@@ -253,7 +253,7 @@ export function FilePreview({ cwd, path, name, onClose, onSaved }: FilePreviewPr
             />
           )}
           {!loading && !showMarkdown && !editing && kind === 'text' && !isBinary && loaded && lines.length === 0 && (
-            <div className="panel-empty">（空文件）</div>
+            <div className="fp-empty">（空文件）</div>
           )}
           {!loading && !showMarkdown && !editing && kind === 'text' && !isBinary && loaded && lines.length > 0 && (
             <div
@@ -286,7 +286,7 @@ export function FilePreview({ cwd, path, name, onClose, onSaved }: FilePreviewPr
                 )
               })}
               {truncatedLines && (
-                <div className="panel-empty">仅显示前 {MAX_PREVIEW_LINES} 行</div>
+                <div className="fp-lines-note">仅显示前 {MAX_PREVIEW_LINES} 行</div>
               )}
             </div>
           )}

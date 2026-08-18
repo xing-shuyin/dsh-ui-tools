@@ -498,6 +498,14 @@
 	overflow: hidden;
 }
 
+.fp-body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
 .fp-head {
 	display: flex;
 	align-items: center;
