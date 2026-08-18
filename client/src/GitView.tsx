@@ -267,7 +267,7 @@ export function GitView({ cwd, narrow = false }: GitViewProps) {
 
         <div className="scm-body">
           <div className="scm-files">
-            <div className="scm-files-head">
+            <div className="scm-files-header">
               <span style={{ display: 'flex', gap: 8 }}>
                 <button
                   type="button"
@@ -346,7 +346,7 @@ export function GitView({ cwd, narrow = false }: GitViewProps) {
           </div>
 
           <div className="scm-diff">
-            <div className="scm-diff-head">
+            <div className="scm-diff-header">
               <span>
                 {viewMode === 'history'
                   ? selectedCommit ? `${selectedCommit.shortHash} ${selectedCommit.subject}` : '提交详情'
@@ -370,13 +370,13 @@ export function GitView({ cwd, narrow = false }: GitViewProps) {
                     <>
                       {fileDiff.staged && (
                         <>
-                          <div className="scm-diff-head" style={{ borderBottom: 'none', padding: '4px 10px' }}>已暂存</div>
+                          <div className="scm-diff-header" style={{ borderBottom: 'none', padding: '4px 10px' }}>已暂存</div>
                           {renderDiff(fileDiff.staged)}
                         </>
                       )}
                       {fileDiff.worktree && (
                         <>
-                          <div className="scm-diff-head" style={{ borderBottom: 'none', padding: '4px 10px' }}>未暂存</div>
+                          <div className="scm-diff-header" style={{ borderBottom: 'none', padding: '4px 10px' }}>未暂存</div>
                           {renderDiff(fileDiff.worktree)}
                         </>
                       )}
