@@ -15,13 +15,15 @@ import { panelStore, termStore, type TermTab } from './store'
 
 interface GitViewProps {
   cwd: string
+  /** True when the panel is too narrow for side-by-side files+diff. */
+  narrow?: boolean
 }
 
 type ViewMode = 'changes' | 'history'
 
 const GIT = ['git', '-c', 'color.ui=false', '--no-pager']
 
-export function GitView({ cwd }: GitViewProps) {
+export function GitView({ cwd, narrow = false }: GitViewProps) {
   const [status, setStatus] = React.useState<ScmStatus | null>(null)
   const [branches, setBranches] = React.useState<ScmBranch[]>([])
   const [branchSel, setBranchSel] = React.useState('')
@@ -196,7 +198,7 @@ export function GitView({ cwd }: GitViewProps) {
   }
 
   return (
-    <div className="ut-view" data-ut-view="git">
+    <div className={`ut-view${narrow ? " narrow" : ""}`} data-ut-view="git">
       <div className="scm-view">
         <div className="scm-header">
           <div className="scm-row">

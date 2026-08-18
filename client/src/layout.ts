@@ -12,8 +12,8 @@
  *   - `--ut-sidebar-px` mirrors the store's sidebar width, read from the
  *     frame's own inline style (React rewrites it on every store change and a
  *     MutationObserver syncs our variable), so the sidebar keeps working;
- *   - `--ut-details-px` is 380px while the panel is open and 0px when
- *     collapsed — the collapse/reopen buttons control it directly.
+ *   - `--ut-details-px` is the panel width while open (default 620px, user
+ *     draggable) and 0px when collapsed. The width persists in localStorage.
  */
 
 let frame: HTMLElement | null = null
@@ -21,16 +21,28 @@ let observer: MutationObserver | null = null
 let detailsOpen = true
 let attempts = 0
 
-/** The width the right panel uses while open (wide enough for pi-web-ui's
- *  two-pane terminal/git layouts: side 250/300 + the main pane). */
+/** Width bounds for the draggable panel. */
+export const PANEL_MIN_WIDTH = 360
+export const PANEL_MAX_WIDTH = 900
+/** Default open width (wide enough for pi-web-ui two-pane terminal/git). */
 export const PANEL_WIDTH_PX = 620
+
+function loadSavedWidth(): number {
+  try {
+    const saved = Number(localStorage.getItem('dsh-ui-tools.panel.width'))
+    if (Number.isFinite(saved) && saved >= PANEL_MIN_WIDTH && saved <= PANEL_MAX_WIDTH) return Math.round(saved)
+  } catch { /* ignore */ }
+  return PANEL_WIDTH_PX
+}
+
+let detailsWidth = loadSavedWidth()
 
 function sync(): void {
   if (!frame) return
   const cols = frame.style.gridTemplateColumns || ''
   const m = cols.match(/^(-?\d+(?:\.\d+)?)px/)
   if (m) frame.style.setProperty('--ut-sidebar-px', `${m[1]}px`)
-  frame.style.setProperty('--ut-details-px', detailsOpen ? `${PANEL_WIDTH_PX}px` : '0px')
+  frame.style.setProperty('--ut-details-px', detailsOpen ? `${detailsWidth}px` : '0px')
 }
 
 function findFrame(): boolean {
@@ -75,4 +87,21 @@ export function setDetailsOpen(open: boolean): void {
 
 export function isDetailsOpen(): boolean {
   return detailsOpen
+}
+
+/** Current open width of the panel (for the drag handle's base). */
+export function getDetailsWidth(): number {
+  return detailsWidth
+}
+
+/** Set the open width (dragging), clamped to the panel bounds and persisted. */
+export function setDetailsWidth(px: number): void {
+  const clamped = Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, Math.round(px)))
+  if (clamped === detailsWidth) return
+  detailsWidth = clamped
+  detailsOpen = true
+  try {
+    localStorage.setItem('dsh-ui-tools.panel.width', String(clamped))
+  } catch { /* ignore */ }
+  sync()
 }

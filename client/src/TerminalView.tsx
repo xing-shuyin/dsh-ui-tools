@@ -20,6 +20,9 @@ interface TerminalViewProps {
   cwd: string
   /** True when this view is the visible panel tab (drives auto-create). */
   active: boolean
+  /** True when the panel is too narrow for the two-pane layout (side column
+   *  becomes a drawer). */
+  narrow?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -212,7 +215,7 @@ const EMPTY_DRAFT: Draft = { name: '', command: '', cwd: '${pwd}' }
 // view
 // ---------------------------------------------------------------------------
 
-export function TerminalView({ cwd, active }: TerminalViewProps) {
+export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps) {
   const tabs = useTermTabs()
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [commands, setCommands] = React.useState<CommandDef[]>([])
@@ -221,6 +224,8 @@ export function TerminalView({ cwd, active }: TerminalViewProps) {
   const [draft, setDraft] = React.useState<Draft>(EMPTY_DRAFT)
   const [confirmDel, setConfirmDel] = React.useState<number | null>(null)
   const [cmdWarning, setCmdWarning] = React.useState<string | null>(null)
+  /** Drawer state for the narrow layout (side column slides over the xterm). */
+  const [drawerOpen, setDrawerOpen] = React.useState(false)
 
   const refreshCommands = React.useCallback(async () => {
     if (!cwd) return
@@ -363,10 +368,14 @@ export function TerminalView({ cwd, active }: TerminalViewProps) {
 
   return (
     <div className="ut-view" data-ut-view="terminal">
-      <div className="terminal-view">
+      <div className={`terminal-view${narrow ? ' narrow' : ''}`}>
+        {narrow && drawerOpen && (
+          <div className="drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+        )}
         {/* Left: the workspace quick-command list on top + terminal tabs below
-            (pi-web-ui TerminalPanel desktop layout). */}
-        <aside className="term-side term-commands">
+            (pi-web-ui TerminalPanel desktop layout; slides as a drawer when
+            the panel is narrow). */}
+        <aside className={`term-side term-commands${narrow && drawerOpen ? ' open' : ''}`}>
           <div className="panel-header">
             <span className="panel-title">快捷命令</span>
             <div className="panel-header-actions">
@@ -480,7 +489,10 @@ export function TerminalView({ cwd, active }: TerminalViewProps) {
                     type="button"
                     className="term-tab-main"
                     title={`${tab.cwd}${tab.command ? `\n> ${tab.command.command}` : ''}`}
-                    onClick={() => setActiveId(tab.id)}
+                    onClick={() => {
+                      setActiveId(tab.id)
+                      if (narrow) setDrawerOpen(false)
+                    }}
                   >
                     <span className={`term-tab-dot ${tab.running ? 'run' : 'exit'}`} />
                     <span className="term-tab-title">
@@ -498,6 +510,16 @@ export function TerminalView({ cwd, active }: TerminalViewProps) {
         </aside>
 
         <div className="term-main">
+          {narrow && (
+            <button
+              type="button"
+              className="term-side-toggle"
+              title="命令与终端列表"
+              onClick={() => setDrawerOpen((v) => !v)}
+            >
+              ☰
+            </button>
+          )}
           {tabs.length === 0 ? (
             <div className="term-empty">
               <FiTerminal className="term-empty-icon" size={34} />

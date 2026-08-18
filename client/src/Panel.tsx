@@ -12,7 +12,7 @@
  */
 import * as React from 'react'
 import { panelStore, type PanelTab } from './store'
-import { setDetailsOpen } from './layout'
+import { getDetailsWidth, setDetailsOpen, setDetailsWidth } from './layout'
 import { FilesView } from './FilesView'
 import { TerminalView } from './TerminalView'
 import { GitView } from './GitView'
@@ -47,16 +47,38 @@ export function Panel({ useSessions, useWorkspaces, workspaces, sessions }: Pane
   // mounted at width 0, so we detect the closed state via ResizeObserver and
   // render a floating reopen button instead of the hidden panel.
   const [collapsed, setCollapsed] = React.useState(false)
+  // Live panel width — drives the responsive terminal/git layouts.
+  const [panelWidth, setPanelWidth] = React.useState(620)
+  const dragRef = React.useRef<{ startX: number; baseWidth: number } | null>(null)
 
   React.useEffect(() => {
     const el = rootRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(() => {
-      setCollapsed(el.getBoundingClientRect().width < 20)
+      const w = el.getBoundingClientRect().width
+      setCollapsed(w < 20)
+      setPanelWidth(Math.round(w))
     })
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  // Drag the left edge to resize the panel width.
+  const onDragStart = (e: React.PointerEvent) => {
+    e.preventDefault()
+    dragRef.current = { startX: e.clientX, baseWidth: getDetailsWidth() }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const onDragMove = (e: React.PointerEvent) => {
+    const d = dragRef.current
+    if (!d) return
+    // Dragging left (clientX ↓) widens the panel.
+    setDetailsWidth(d.baseWidth + (d.startX - e.clientX))
+  }
+  const onDragEnd = (e: React.PointerEvent) => {
+    dragRef.current = null
+    try { ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+  }
 
   // SnapshotSelectorHook requires a selector: useSessions((s) => ...).
   const current = useSessions ? useSessions((s: any) => s?.current) as string | undefined : undefined
@@ -91,6 +113,15 @@ export function Panel({ useSessions, useWorkspaces, workspaces, sessions }: Pane
         </button>
       ) : (
         <>
+          {/* Left-edge drag handle: resize the panel width */}
+          <div
+            className="ut-resize"
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            onPointerCancel={onDragEnd}
+            title="拖拽调整宽度"
+          />
           <div className="ut-panel-head">
         <div className="ut-view-tabs" role="tablist">
           {TABS.map((t) => (
@@ -121,10 +152,10 @@ export function Panel({ useSessions, useWorkspaces, workspaces, sessions }: Pane
           <FilesView cwd={cwd} workspaces={wsItems} onSwitchWorkspace={onSwitchWorkspace} />
         </div>
         <div className={`ut-view ${state.tab === 'terminal' ? '' : 'hidden'}`}>
-          <TerminalView cwd={cwd} active={state.tab === 'terminal'} />
+          <TerminalView cwd={cwd} active={state.tab === 'terminal'} narrow={panelWidth < 520} />
         </div>
         <div className={`ut-view ${state.tab === 'git' ? '' : 'hidden'}`}>
-          <GitView cwd={cwd} />
+          <GitView cwd={cwd} narrow={panelWidth < 520} />
         </div>
         <div className={`ut-view ${state.tab === 'jobs' ? '' : 'hidden'}`}>
           <JobsView sessionId={current} useSessions={useSessions as never} />
