@@ -34,6 +34,7 @@ import {
 } from 'node:path'
 
 import { setupInlineMarkers, setupTodoPlugin } from './marker-todo.js'
+import { createBackgroundServerManager } from './background-servers.js'
 
 export const name = 'dsh-ui-tools'
 
@@ -815,6 +816,12 @@ export function apply(ctx) {
   const jobsSvc = ctx.get('jobs')
   const agentsSvc = ctx.get('agents')
 
+  // ---- background-server tracking: AI-started services (npm run dev & …) ----
+  // Hooks bash/pwsh executions and diffs LISTENING ports to detect services
+  // the agent left running in the background. Independent of the todo markers.
+  const bgServers = createBackgroundServerManager(ctx)
+  disposers.push(() => bgServers.dispose())
+
   // ---- mention enrichment: insert path-only reference messages before the
   // next user message (no content attached — the agent reads files itself) ----
   const offPreStep = ctx.on('agent/pre-step', async (payload, next) => {
@@ -867,7 +874,7 @@ export function apply(ctx) {
         kind: 'prefix',
         path: '/dsh-ui-tools',
         handler: async (req, res) => {
-          await handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc, markerController })
+          await handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc, markerController, bgServers })
         },
       })
       disposers.push(offRoute)
@@ -882,7 +889,7 @@ export function apply(ctx) {
   }
 }
 
-async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc, markerController }) {
+async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, agentsSvc, markerController, bgServers }) {
   try {
     const url = new URL(req.url, 'http://localhost')
     const path = url.pathname
@@ -1165,6 +1172,25 @@ async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, 
           }
         }
         sendJson(res, 200, { ok: true, killed })
+      },
+
+      'GET /dsh-ui-tools/api/background-servers': async () => {
+        sendJson(res, 200, { servers: bgServers.list() })
+      },
+
+      'POST /dsh-ui-tools/api/background-servers/kill': async () => {
+        const body = await readBody(req)
+        const port = Number(body && body.port)
+        if (!Number.isInteger(port) || port <= 0) {
+          return sendJson(res, 400, { ok: false, error: '缺少有效的 port' })
+        }
+        const killed = await bgServers.kill(port)
+        sendJson(res, 200, { ok: killed, servers: bgServers.list() })
+      },
+
+      'POST /dsh-ui-tools/api/background-servers/kill-all': async () => {
+        const killed = await bgServers.killAll()
+        sendJson(res, 200, { ok: true, killed, servers: bgServers.list() })
       },
     }
 

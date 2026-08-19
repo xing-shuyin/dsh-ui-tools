@@ -37,10 +37,12 @@
 - 提交历史(带 graph 分支图)与提交详情;
 - commit、push、pull、分支下拉切换 —— 写操作在终端标签页中运行,可实时查看输出。
 
-### ⏳ 后台任务
+### ⏳ 后台任务（后台服务检测，移植自 pi-web-ui）
 
-- 列出当前会话的后台任务(状态、kind、详情);
-- 单个任务关闭、一键全部关闭。
+- 自动检测 AI 通过 bash/pwsh 在后台启动的监听端口服务（如 `npm run dev &`、`python -m http.server`）——每次 shell 工具执行前后对比 LISTENING 端口，发现新服务即记录;
+- 面板显示端口、pid、进程名、启动时间,可单个停止(杀整个进程树)或一键全部停止;
+- 进程自行退出后 30s 内自动从面板消失;服务列表跨会话存活(插件级全局状态);
+- 与模型 todo 完全独立:本面板只展示「真实运行的服务」。
 
 ### ✍️ 行内标记任务列表(替换 todo_write)
 
@@ -154,8 +156,9 @@ dsh-ui-tools/
 ├── package.json          # 插件包清单 (dsh.bundle.patch / dsh.client)
 ├── cordis.patch.yml      # bundle 层:插入插件行
 ├── dsh/
-│   ├── index.js          # Host 端:HTTP 路由 + node-pty 终端 + git + mentions 富化
-│   └── marker-todo.js    # 通用内联标记系统(发布 inlineMarkers 服务)+ todo 功能
+│   ├── index.js                # Host 端:HTTP 路由 + node-pty 终端 + git + mentions 富化
+│   ├── background-servers.js   # 后台服务检测(移植自 pi-web-ui):端口 diff + 管理
+│   └── marker-todo.js          # 通用内联标记系统(发布 inlineMarkers 服务)+ todo 功能
 ├── client/
 │   ├── src/              # Client 端源码 (TSX, esbuild 打包)
 │   └── client.js         # 构建产物 (window.__ModuleLoader__ 协议)

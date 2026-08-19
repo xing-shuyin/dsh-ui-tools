@@ -160,7 +160,7 @@ export function Panel({ useSessions, useWorkspaces, workspaces, sessions }: Pane
           <GitView cwd={cwd} narrow={panelWidth < 520} />
         </div>
         <div className={`ut-view ${state.tab === 'jobs' ? '' : 'hidden'}`}>
-          <JobsView sessionId={current} useSessions={useSessions as never} />
+          <JobsView />
         </div>
         <div className={`ut-view ${state.tab === 'settings' ? '' : 'hidden'}`}>
           <SettingsView />

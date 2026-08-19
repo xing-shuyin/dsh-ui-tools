@@ -167,6 +167,14 @@ export function FiXCircle(p: IconProps) {
 export function FiActivity(p: IconProps) {
   return base(p, React.createElement('polyline', { points: '22 12 18 12 15 21 9 3 6 12 2 12' }))
 }
+export function FiServer(p: IconProps) {
+  return base(p, React.createElement(React.Fragment, null,
+    React.createElement('rect', { x: '2', y: '2', width: '20', height: '8', rx: '2', ry: '2' }),
+    React.createElement('rect', { x: '2', y: '14', width: '20', height: '8', rx: '2', ry: '2' }),
+    React.createElement('line', { x1: '6', y1: '6', x2: '6.01', y2: '6' }),
+    React.createElement('line', { x1: '6', y1: '18', x2: '6.01', y2: '18' }),
+  ))
+}
 export function FiSettings(p: IconProps) {
   return base(p, React.createElement(React.Fragment, null,
     React.createElement('circle', { cx: '12', cy: '12', r: '3' }),
