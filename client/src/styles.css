@@ -1409,13 +1409,17 @@
 	min-width: 0;
 	min-height: 0;
 	background: var(--dsw-alias-bg-base, #0b0d12);
+	/* Padding lives here (not on .term-xterm): FitAddon measures the xterm's
+	   parent element and only subtracts the xterm's own padding, so padding on
+	   .term-xterm made it compute rows for more space than is actually visible
+	   and the bottom line of the terminal was clipped below the viewport. */
+	padding: 10px 8px 8px;
 	position: relative;
 }
 
 .term-xterm {
 	flex: 1;
 	min-height: 0;
-	padding: 10px 8px 8px;
 }
 .term-xterm.hidden {
 	display: none;
