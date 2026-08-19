@@ -270,7 +270,8 @@ const EMPTY_DRAFT: Draft = { name: '', command: '', cwd: '${pwd}' }
 
 export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps) {
   const tabs = useTermTabs()
-  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const activeId = useTermActiveId()
+  const setActiveId = React.useCallback((id: string | null) => termStore.setActiveId(id), [])
   const [commands, setCommands] = React.useState<CommandDef[]>([])
   const [isNew, setIsNew] = React.useState(false)
   const [editingIdx, setEditingIdx] = React.useState<number | null>(null)
@@ -293,13 +294,14 @@ export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps)
     void refreshCommands()
   }, [refreshCommands])
 
-  // Keep the active tab valid.
+  // Keep the active tab valid (activeId is now owned by termStore; addTab
+  // activates the new tab automatically, removeTab repairs the selection).
   React.useEffect(() => {
     if (tabs.length === 0) setActiveId(null)
     else if (!tabs.some((t) => t.id === activeId)) {
       setActiveId(tabs[tabs.length - 1].id)
     }
-  }, [tabs, activeId])
+  }, [tabs, activeId, setActiveId])
 
   // Switching to the terminal tab with no terminal open → open one
   // automatically (same behavior as pi-web-ui's first terminal-view click).
@@ -575,4 +577,8 @@ export function TerminalView({ cwd, active, narrow = false }: TerminalViewProps)
 
 function useTermTabs(): TermTab[] {
   return React.useSyncExternalStore(termStore.subscribe, termStore.getTabs)
+}
+
+function useTermActiveId(): string | null {
+  return React.useSyncExternalStore(termStore.subscribe, termStore.getActiveId)
 }

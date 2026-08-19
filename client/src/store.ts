@@ -58,13 +58,19 @@ export interface TermTab {
 const termListeners = new Set<() => void>()
 let termTabs: TermTab[] = []
 let termSeq = 0
+/** 当前激活的终端 tab id（全局，addTab 自动激活——让 Git tab 等外部 addTab 的新终端立即可见）。 */
+let termActiveId: string | null = null
 
 export const termStore = {
   getTabs(): TermTab[] {
     return termTabs
   },
+  getActiveId(): string | null {
+    return termActiveId
+  },
   addTab(tab: TermTab): void {
     termTabs = [...termTabs, tab]
+    termActiveId = tab.id // 新 tab 自动激活
     emitTerms()
   },
   updateTab(id: string, patch: Partial<TermTab>): void {
@@ -73,7 +79,16 @@ export const termStore = {
   },
   removeTab(id: string): void {
     termTabs = termTabs.filter((t) => t.id !== id)
+    if (termActiveId === id) {
+      termActiveId = termTabs.length > 0 ? termTabs[termTabs.length - 1].id : null
+    }
     emitTerms()
+  },
+  setActiveId(id: string | null): void {
+    if (termActiveId !== id) {
+      termActiveId = id
+      emitTerms()
+    }
   },
   nextTitle(): string {
     termSeq += 1

@@ -171,7 +171,7 @@ export function GitView({ cwd, narrow = false }: GitViewProps) {
     runGitCommand('git checkout', `git checkout ${branchSel}`)
   }
 
-  const handlePush = () => runGitCommand('git push', 'git push')
+  const handlePush = () => runGitCommand('git push', 'git push -u origin HEAD')
   const handlePull = () => runGitCommand('git pull', 'git pull')
 
   const renderDiff = (text: string) => {
