@@ -1432,6 +1432,14 @@ var Ga=Object.create;var Di=Object.defineProperty;var Xa=Object.getOwnPropertyDe
 .term-xterm .xterm {
 	height: 100%;
 }
+/* xterm.css hard-codes .xterm-viewport background to #000; when the fitted
+   row count doesn't fill the viewport exactly (rows \xD7 cellHeight < height)
+   the leftover strip at the bottom shows pure black. Use the theme
+   background so it blends with the terminal content (three-class selector
+   beats the injected xterm.css rule which is appended after this sheet). */
+.term-xterm .xterm .xterm-viewport {
+	background-color: var(--dsw-alias-bg-base, #0b0d12);
+}
 
 .term-empty {
 	flex: 1;
