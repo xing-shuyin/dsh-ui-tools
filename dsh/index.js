@@ -33,7 +33,7 @@ import {
   dirname, extname, isAbsolute, join, relative, resolve, sep,
 } from 'node:path'
 
-import { setupMarkerTodo } from './marker-todo.js'
+import { setupInlineMarkers, setupTodoPlugin } from './marker-todo.js'
 
 export const name = 'dsh-ui-tools'
 
@@ -229,79 +229,179 @@ async function saveCommands(root, commands) {
 // The marker-todo feature is a model-facing behavior of the harness process,
 // so the toggle is GLOBAL (not per-workspace, unlike commands.json). It is
 // persisted at ~/.dsh-ui-tools/settings.json and applied immediately: turning
-// it off disposes the marker integration (todo_write denial, markers_list
-// tool, [[todo:...]] parsing, prompt guidance) and restores the native
-// `todo_write` tool; turning it back on re-mounts the integration.
+// it off disposes the marker integration (todo_write execution takeover,
+// markers_list tool, [[todo:...]] parsing, prompt guidance) and restores the
+// native `todo_write` execution; turning it back on re-mounts the integration.
 // ---------------------------------------------------------------------------
 
 function settingsFilePath() {
   return join(homedir(), '.dsh-ui-tools', 'settings.json')
 }
 
-/** Read the persisted marker toggle; any read/parse failure defaults to ON. */
-function loadMarkerEnabled() {
+/**
+ * 读取持久化的 marker 设置：{ enabled, tools }。
+ *   - enabled：全局总开关（关闭时整个内联标记框架卸载，恢复原生行为）
+ *   - tools：插件级开关 { 插件名: 是否启用 }，未列出即默认启用
+ * 兼容旧版单字段 `markerEnabled`（迁移为全局开关）。任何读取/解析失败默认全开。
+ */
+function loadSettings() {
   try {
     const path = settingsFilePath()
-    if (!existsSync(path)) return true
+    if (!existsSync(path)) return { enabled: true, tools: {} }
     const parsed = JSON.parse(readFileSync(path, 'utf8'))
-    return parsed.markerEnabled !== false
+    const markers = parsed.markers || {}
+    let enabled = true
+    if (markers.enabled !== undefined) enabled = markers.enabled !== false
+    else if (parsed.markerEnabled !== undefined) enabled = parsed.markerEnabled !== false
+    const tools = markers.tools && typeof markers.tools === 'object' ? markers.tools : {}
+    return { enabled, tools }
   } catch {
-    return true
+    return { enabled: true, tools: {} }
   }
 }
 
-async function saveMarkerEnabled(enabled) {
+async function saveSettings(settings) {
   const dir = join(homedir(), '.dsh-ui-tools')
   await mkdir(dir, { recursive: true })
-  await writeFile(settingsFilePath(), JSON.stringify({ markerEnabled: enabled }, null, 2) + '\n', 'utf8')
+  const payload = {
+    markers: {
+      enabled: settings.enabled,
+      tools: settings.tools,
+    },
+  }
+  await writeFile(settingsFilePath(), JSON.stringify(payload, null, 2) + '\n', 'utf8')
 }
 
 /**
- * Own the marker-todo lifecycle: (dis)mount `setupMarkerTodo` on toggle and
- * persist the switch. `apply` wires `dispose()` into the plugin teardown.
+ * Own the marker system lifecycle across two levels:
+ *   - 全局总开关（settings.enabled）：控制整个内联标记框架（inlineMarkers 服务、
+ *     markers_list、标记解析分发）的挂载/卸载。关闭时恢复原生 todo_write。
+ *   - 插件级开关（settings.tools）：每个注册的 marker 插件（todo、第三方）可单独
+ *     停用。todo 停用时其标记不再执行、原生 todo_write 恢复；其他插件不受影响。
+ * 持久化到 ~/.dsh-ui-tools/settings.json，切换即时生效（对所有工作区）。
+ * `apply` wires `dispose()` into the plugin teardown.
  */
 function createMarkerController(ctx) {
-  let enabled = loadMarkerEnabled()
-  let disposer = null
-  if (enabled) {
+  const settings = loadSettings()
+  let framework = null // { inlineMarkers, disposer }
+  let todoDisposer = null
+
+  const persist = () => {
+    void saveSettings(settings).catch((err) => {
+      console.error('[dsh-ui-tools] settings save failed:', String((err && err.message) || err))
+    })
+  }
+
+  const todoActive = () => settings.enabled && settings.tools.todo !== false
+
+  const mountTodo = () => {
+    if (todoDisposer) return
     try {
-      disposer = setupMarkerTodo(ctx)
+      todoDisposer = setupTodoPlugin(ctx)
     } catch (err) {
-      console.error('[dsh-ui-tools] marker setup failed:', String((err && err.message) || err))
-      enabled = false
+      console.error('[dsh-ui-tools] todo plugin setup failed:', String((err && err.message) || err))
+      todoDisposer = null
     }
   }
+  const unmountTodo = () => {
+    if (todoDisposer) {
+      try { todoDisposer() } catch { /* ignore */ }
+      todoDisposer = null
+    }
+  }
+
+  const mountFramework = () => {
+    if (framework) return true
+    try {
+      framework = setupInlineMarkers(ctx, settings)
+    } catch (err) {
+      console.error('[dsh-ui-tools] marker setup failed:', String((err && err.message) || err))
+      framework = null
+      return false
+    }
+    if (todoActive()) mountTodo()
+    return true
+  }
+  const unmountFramework = () => {
+    unmountTodo()
+    if (framework) {
+      try { framework.disposer() } catch { /* ignore */ }
+      framework = null
+    }
+  }
+
+  // 初始挂载
+  if (settings.enabled && !mountFramework()) {
+    settings.enabled = false
+    persist()
+  }
+
   return {
-    get enabled() {
-      return enabled
-    },
-    set(next) {
-      const target = next !== false
-      if (target === enabled) return { ok: true, markerEnabled: enabled }
-      if (disposer) {
-        try { disposer() } catch { /* ignore */ }
-        disposer = null
-      }
-      if (target) {
-        try {
-          disposer = setupMarkerTodo(ctx)
-        } catch (err) {
-          enabled = false
-          void saveMarkerEnabled(false).catch(() => { /* ignore */ })
-          return { ok: false, markerEnabled: false, error: `marker 启用失败：${String((err && err.message) || err)}` }
+    /** 当前完整状态（含已注册插件列表），供 API/设置面板展示。 */
+    get state() {
+      const tools = []
+      // 内置 todo 插件始终展示（即使框架未挂载/全局关闭）
+      tools.push({
+        name: 'todo',
+        description: '任务列表：[[todo:new:...]] 新建 / [[todo:set:...]] 状态 / [[todo:remove:...]] 删除 / [[todo:dep:...]] 依赖 / [[todo:title:...]] 重命名',
+        enabled: todoActive(),
+      })
+      // 框架已挂载时，追加第三方注册的插件
+      if (framework) {
+        for (const name of framework.inlineMarkers.list()) {
+          if (name === 'todo') continue
+          const m = framework.inlineMarkers.meta(name)
+          tools.push({
+            name,
+            description: (m && m.description) || '',
+            enabled: !!(m && m.enabled),
+          })
         }
       }
-      enabled = target
-      void saveMarkerEnabled(enabled).catch((err) => {
-        console.error('[dsh-ui-tools] settings save failed:', String((err && err.message) || err))
-      })
-      return { ok: true, markerEnabled: enabled }
+      return { enabled: settings.enabled, tools }
+    },
+    /** 全局总开关。 */
+    get enabled() {
+      return settings.enabled
+    },
+    setGlobal(next) {
+      const target = next !== false
+      if (target === settings.enabled) return { ok: true, ...this.state }
+      if (target) {
+        if (!mountFramework()) {
+          settings.enabled = false
+          persist()
+          return { ok: false, markerEnabled: false, error: 'marker 启用失败', ...this.state }
+        }
+        settings.enabled = true
+      } else {
+        unmountFramework()
+        settings.enabled = false
+      }
+      persist()
+      return { ok: true, markerEnabled: settings.enabled, ...this.state }
+    },
+    /** 插件级开关（todo 或第三方插件）。 */
+    setTool(name, enabled) {
+      const target = enabled !== false
+      const prev = settings.tools[name]
+      settings.tools[name] = target
+      if (framework) {
+        framework.inlineMarkers.setEnabled(name, target && settings.enabled)
+      }
+      if (name === 'todo') {
+        if (target && settings.enabled) mountTodo()
+        else unmountTodo()
+      }
+      persist()
+      return { ok: true, prev, ...this.state }
+    },
+    /** 兼容旧 API：整体开关（等价全局总开关）。 */
+    set(next) {
+      return this.setGlobal(next)
     },
     dispose() {
-      if (disposer) {
-        try { disposer() } catch { /* ignore */ }
-        disposer = null
-      }
+      unmountFramework()
     },
   }
 }
@@ -702,8 +802,8 @@ export function apply(ctx) {
 
   const disposers = []
 
-  // Inline-marker todo: replaces the model-facing `todo_write` tool with
-  // [[todo:...]] markers written in the reply body (ported from pi-marker-tools).
+  // Todo takeover: `todo_write` execution is replaced by this plugin's rich
+  // state ([[todo:...]] inline markers and markers_list stay available).
   // The settings controller lets the user toggle it at runtime (see the
   // 设置 tab in the panel); the persisted switch is read at startup.
   const markerController = createMarkerController(ctx)
@@ -951,15 +1051,32 @@ async function handleRequest({ req, res, terminals, mentionsBySession, jobsSvc, 
       },
 
       'GET /dsh-ui-tools/api/settings': async () => {
-        sendJson(res, 200, { markerEnabled: markerController.enabled })
+        sendJson(res, 200, { markerEnabled: markerController.enabled, markers: markerController.state })
       },
 
       'POST /dsh-ui-tools/api/settings': async () => {
         const body = await readBody(req)
-        if (typeof body.markerEnabled !== 'boolean') {
-          return sendJson(res, 400, { error: 'markerEnabled 必须是布尔值' })
+        // 兼容旧格式 { markerEnabled: boolean }（等价全局总开关）
+        if (body.markers === undefined && typeof body.markerEnabled === 'boolean') {
+          return sendJson(res, 200, markerController.setGlobal(body.markerEnabled))
         }
-        sendJson(res, 200, markerController.set(body.markerEnabled))
+        const m = body.markers
+        if (!m || typeof m !== 'object') {
+          return sendJson(res, 400, { error: 'settings 请求需要 markers: { enabled?, tools? }' })
+        }
+        let result = null
+        if (typeof m.enabled === 'boolean') {
+          result = markerController.setGlobal(m.enabled)
+        }
+        if (m.tools && typeof m.tools === 'object') {
+          for (const [name, en] of Object.entries(m.tools)) {
+            if (typeof en === 'boolean') result = markerController.setTool(name, en)
+          }
+        }
+        if (result === null) {
+          return sendJson(res, 400, { error: 'markers 需要 enabled 或 tools 至少一项' })
+        }
+        sendJson(res, 200, result)
       },
 
       'GET /dsh-ui-tools/api/mentions': async () => {

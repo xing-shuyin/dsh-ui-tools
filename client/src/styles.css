@@ -330,6 +330,62 @@
 	line-height: 1.5;
 	color: var(--text-faint);
 }
+/* 问号悬浮提示（tooltip） */
+.ut-tip-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	margin-left: 6px;
+	cursor: help;
+	vertical-align: middle;
+	outline: none;
+}
+.ut-tip-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 15px;
+	height: 15px;
+	border-radius: 50%;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1;
+	color: var(--text-faint);
+	background: var(--bg-elev2);
+	border: 1px solid var(--border);
+	user-select: none;
+}
+.ut-tip-wrap:hover .ut-tip-icon {
+	color: var(--text);
+	border-color: var(--text-faint);
+}
+.ut-tip-pop {
+	position: absolute;
+	left: 0;
+	top: calc(100% + 8px);
+	z-index: 60;
+	width: 280px;
+	padding: 10px 12px;
+	font-size: 11px;
+	font-weight: 400;
+	line-height: 1.6;
+	color: var(--text);
+	background: var(--bg-elev2);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+	white-space: pre-line;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.15s ease, visibility 0.15s ease;
+	pointer-events: none;
+}
+.ut-tip-wrap:hover .ut-tip-pop,
+.ut-tip-wrap:focus-within .ut-tip-pop {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+}
 .ut-switch {
 	position: relative;
 	flex-shrink: 0;

@@ -46,12 +46,41 @@
 
 参照 [pi-marker-tools](https://github.com/xing-shuyin/pi-marker-tools),把模型侧的 `todo_write` 工具替换为「写在回答正文里的 `[[todo:...]]` 行内标记」:
 
-- 状态类操作不再调用工具,直接在回复正文写标记,插件在消息结束时自动解析、执行、落库,不会中断回答;
+- 状态类操作不再调用工具,直接在回复正文写标记,插件在消息结束时自动解析、执行、落库,不会中断回答 —— 少几轮工具调用问答往返,全部由 AI 回答内部实现管理;
 - 标记语法:`[[todo:new:写单元测试]]` 新建、`[[todo:set:2,completed]]` 改状态、`[[todo:remove:2]]` 删除、`[[todo:dep:2,blocks=1,3]]` 声明依赖、`[[todo:title:2:新标题]]` 重命名;
 - 富状态(带 id)内嵌进原生 `todo/write` 事件持久化(随分支跟随,resume 恢复;旧日志兼容读取 `marker/todos` 快照) —— 现有 TodoDock 任务条零改动直接生效;
-- 面板新增「设置」tab:可一键开关 marker 功能(停用时恢复原生 `todo_write` 工具、不再解析标记;切换即时生效,并持久化到 `~/.dsh-ui-tools/settings.json`,对所有工作区生效);
-- 只读查询走 `markers_list` 工具;`todo_write` 调用会被拒绝并给出指引;
-- 与 pi-marker-tools 一致:标记文本保留在消息原文,执行失败的标记留待下轮修正。
+- 面板新增「设置」tab:两级开关控制 marker 功能 —— 全局总闸(停用整个内联标记框架、恢复原生 `todo_write` 工具、不再解析标记)+ 每个内联标记插件独立开关(如 `todo`,停用后该插件的标记不再执行、恢复原生行为,其他插件不受影响;第三方注册的插件也会出现在列表里)。切换即时生效,持久化到 `~/.dsh-ui-tools/settings.json`,对所有工作区生效;
+- 只读查询走 `markers_list` 工具;`todo_write` 已从模型可见工具中移除(不会出现 unknown tool 提示),旧调用也会被本插件接管、绝不报错;
+- 与 pi-marker-tools 一致:标记文本保留在消息原文,执行失败的标记留待下轮修正;
+- 解析器跳过反引号/代码块内的标记(文档示例不会误执行),`[[todo:title:<id>:<新标题>]]` 支持冒号语法,持久化前做无损 JSON 清洗(杜绝 exotic 值导致 `todo/write` 写入失败)。
+
+### 🧩 第三方扩展:注册自己的内联标记工具
+
+通用内联标记系统以 **Cordis Service `inlineMarkers`** 发布 —— 任何 dsh bundle 插件都能用官方格式注册新的 `[[tool:...]]` 标记,与内置 `todo` 完全同权(解析、持久化、错误处理一致):
+
+```js
+// 你的插件 dsh/index.js(官方 bundle 插件格式)
+export const name = 'my-inline-tool'
+export const inject = ['inlineMarkers']
+
+export function apply(ctx) {
+  ctx.inlineMarkers.register('note', {
+    // state: 当前会话共享富状态(含 todo 的 tasks/nextId,JSON 安全字段自动透传持久化)
+    // token: { tool, op, args, kwargs, raw }
+    applyOp(state, token) {
+      const text = (token.args[0] || '').trim()
+      if (!text) return { applied: false, error: 'note:add 需要文本' }
+      state.notes = state.notes || []
+      state.notes.push({ text, at: Date.now() })
+      return { applied: true, feedback: `Note added: ${text}` }
+    },
+  })
+}
+```
+
+- `applyOp` 返回 `{ applied: true, feedback? }` 表示状态已变(触发持久化);`{ applied: false, error? }` 表示忽略(不报错、不落库);
+- 注册后模型在回答正文写 `[[note:add:...]]` 即自动触发,与 `[[todo:...]]` 完全一致;
+- 完整可运行示例见 [`examples/inline-note/`](examples/inline-note/),安装方式与任何 bundle 插件相同(`dsh plugin --profile web add <你的包>` 或本地路径 patch)。
 
 ### 🔊 声音提示(移植自 pi-web-ui)
 
@@ -124,10 +153,14 @@ npm run build      # 打包 client → client/client.js
 dsh-ui-tools/
 ├── package.json          # 插件包清单 (dsh.bundle.patch / dsh.client)
 ├── cordis.patch.yml      # bundle 层:插入插件行
-├── dsh/index.js          # Host 端:HTTP 路由 + node-pty 终端 + git + mentions 富化
+├── dsh/
+│   ├── index.js          # Host 端:HTTP 路由 + node-pty 终端 + git + mentions 富化
+│   └── marker-todo.js    # 通用内联标记系统(发布 inlineMarkers 服务)+ todo 功能
 ├── client/
 │   ├── src/              # Client 端源码 (TSX, esbuild 打包)
 │   └── client.js         # 构建产物 (window.__ModuleLoader__ 协议)
+├── examples/
+│   └── inline-note/      # 第三方内联标记工具示例(官方 bundle 格式)
 └── scripts/build-client.mjs
 ```
 

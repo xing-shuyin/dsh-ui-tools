@@ -1,0 +1,16 @@
+{
+  "name": "inline-note",
+  "version": "0.1.0",
+  "description": "dsh-ui-tools 内联标记系统第三方扩展示例：[[note:...]] 标记工具（官方 bundle 插件格式）。",
+  "type": "module",
+  "main": null,
+  "exports": {
+    ".": "./dsh/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}
